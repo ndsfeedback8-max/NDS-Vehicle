@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Running Chart</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f3f5f9; --surface:#ffffff; --ink:#1a1f26; --ink-dim:#67707c;
+    --line:#e3e7ee; --route:#1a73e8; --route-dark:#1558b0; --gauge:#fb8c00;
+    --gauge-dark:#e07600; --danger:#d93025; --danger-bg:#fce8e6;
+    --radius:12px;
+    font-family:'Roboto','Roboto Mono',-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Roboto',-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:calc(70px + env(safe-area-inset-bottom,0px));
+  }
+  .mono{font-family:'Roboto Mono',ui-monospace,Menlo,Consolas,monospace;}
+  header{
+    padding:20px 18px 16px; background:var(--surface); box-shadow:0 1px 2px rgba(16,24,40,.06);
+  }
+  header h1{margin:0; font-size:19px; letter-spacing:.1px; font-weight:700;}
+  header p{margin:4px 0 0; color:var(--ink-dim); font-size:12.5px;}
+  main{max-width:520px; margin:0 auto; padding:16px 14px 24px;}
+  .tab{display:none;}
+  .tab.active{display:block; animation:fade .18s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
+
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:16px; box-shadow:0 1px 2px rgba(16,24,40,.04), 0 1px 6px rgba(16,24,40,.05);}
+  .card h2{margin:0 0 12px; font-size:14.5px; color:var(--route); font-weight:700;}
+  .row{display:flex; gap:10px;}
+  .row > *{flex:1;}
+  label{display:block; font-size:12px; color:var(--ink-dim); margin:10px 0 4px; font-weight:500;}
+  label:first-of-type{margin-top:0;}
+  input, select{
+    width:100%; padding:10px 11px; border:1px solid var(--line); border-radius:8px;
+    background:var(--bg); color:var(--ink); font-size:14.5px; font-family:inherit;
+  }
+  input:focus, select:focus{outline:2px solid var(--route); outline-offset:1px;}
+  .readout{
+    margin-top:12px; padding:10px 12px; background:#eef4fd; color:var(--route-dark);
+    border-radius:8px; display:flex; justify-content:space-between; align-items:baseline;
+  }
+  .readout span:first-child{font-size:12px; opacity:.8; color:var(--ink-dim);}
+  .readout span:last-child{font-size:20px; letter-spacing:.2px; font-weight:700;}
+  button{
+    border:none; border-radius:8px; padding:11px 14px; font-size:14.5px; font-weight:500;
+    cursor:pointer; font-family:inherit;
+  }
+  .btn-primary{background:var(--route); color:#fff; width:100%; margin-top:14px;}
+  .btn-primary:active{background:var(--route-dark);}
+  .btn-fuel{background:var(--gauge);}
+  .btn-fuel:active{background:var(--gauge-dark);}
+  .btn-ghost{background:transparent; color:var(--ink-dim); border:1px solid var(--line); padding:6px 10px; font-size:12.5px;}
+  .btn-qr{background:#eef4fd; color:var(--route); padding:6px 10px; font-size:12.5px;}
+
+  .entry{border-top:1px solid var(--line); padding:11px 0;}
+  .entry:first-child{border-top:none;}
+  .entry-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .entry-title{font-size:14px; font-weight:500;}
+  .entry-sub{font-size:12px; color:var(--ink-dim); margin-top:2px;}
+  .entry-num{font-size:15px; font-weight:700; white-space:nowrap;}
+  .del{background:none; border:none; color:var(--danger); font-size:12px; padding:2px 4px; cursor:pointer;}
+  .empty{color:var(--ink-dim); font-size:13.5px; padding:10px 0; text-align:center;}
+
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .stat{background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px 12px;}
+  .stat .label{font-size:11.5px; color:var(--ink-dim);}
+  .stat .value{font-size:18px; font-weight:700; margin-top:2px;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th, td{text-align:left; padding:6px 4px; border-bottom:1px solid var(--line);}
+  th{color:var(--ink-dim); font-weight:500; font-size:11.5px;}
+  .table-wrap{overflow-x:auto;}
+  .qr-box{margin-top:10px; padding:12px; background:var(--bg); border-radius:8px; text-align:center;}
+  .qr-box canvas{max-width:100%; border-radius:6px;}
+  .qr-box a{display:inline-block; margin-top:8px; font-size:12.5px; color:var(--route); text-decoration:none; font-weight:500;}
+
+  nav{
+    position:fixed; left:0; right:0; bottom:0; background:var(--surface);
+    box-shadow:0 -1px 3px rgba(16,24,40,.08); display:flex;
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  nav button{
+    flex:1; background:none; border-radius:0; padding:9px 2px 8px; color:var(--ink-dim);
+    display:flex; flex-direction:column; align-items:center; gap:2px; font-size:11px; font-weight:500;
+  }
+  nav button .ico{font-size:18px;}
+  nav button.active{color:var(--route); font-weight:700;}
+  @media print{
+    nav, header, .no-print{display:none !important;}
+    body{padding:0; background:#fff; color:#000;}
+    .tab{display:block !important;}
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>Vehicle Running Chart</h1>
+  <p>Log trips and fuel, on your phone, then pull a monthly report.</p>
+</header>
+
+<main>
+  <!-- TRIPS TAB -->
+  <section id="tab-trip" class="tab active">
+    <div class="card">
+      <h2>Log a trip</h2>
+      <form id="tripForm">
+        <label>Date</label>
+        <input type="date" id="t_date" required>
+        <label>Vehicle number</label>
+        <input type="text" id="t_vehicle" list="vehicleList" placeholder="e.g. WP CAB-4521" required>
+        <div class="row">
+          <div>
+            <label>From</label>
+            <input type="text" id="t_from" list="locationList" placeholder="Origin" required>
+          </div>
+          <div>
+            <label>To</label>
+            <input type="text" id="t_to" list="locationList" placeholder="Destination" required>
+          </div>
+        </div>
+        <label>Reason</label>
+        <input type="text" id="t_reason" list="reasonList" placeholder="e.g. Official" required>
+        <datalist id="reasonList">
+          <option value="Official"><option value="Personal"><option value="Delivery"><option value="Maintenance">
+        </datalist>
+        <div class="row">
+          <div>
+            <label>Start mileage (km)</label>
+            <input type="number" id="t_start" step="0.1" min="0" required>
+          </div>
+          <div>
+            <label>End mileage (km)</label>
+            <input type="number" id="t_end" step="0.1" min="0" required>
+          </div>
+        </div>
+        <div class="readout"><span>Distance covered</span><span class="mono" id="t_distance">–</span></div>
+        <button type="submit" class="btn-primary">Save trip</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Trip history</h2>
+      <div id="tripList"></div>
+    </div>
+  </section>
+
+  <!-- FUEL TAB -->
+  <section id="tab-fuel" class="tab">
+    <div class="card">
+      <h2>Log fuelling</h2>
+      <form id="fuelForm">
+        <label>Date</label>
+        <input type="date" id="f_date" required>
+        <label>Vehicle number</label>
+        <input type="text" id="f_vehicle" list="vehicleList" placeholder="e.g. WP CAB-4521" required>
+        <label>Odometer at fuelling (km)</label>
+        <input type="number" id="f_km" step="0.1" min="0" required>
+        <div class="row">
+          <div>
+            <label>Total litres</label>
+            <input type="number" id="f_liters" step="0.01" min="0.01" required>
+          </div>
+          <div>
+            <label>Amount paid (Rs.)</label>
+            <input type="number" id="f_price" step="0.01" min="0" required>
+          </div>
+        </div>
+        <div class="readout"><span>Fuel average since last fill</span><span class="mono" id="f_avg">–</span></div>
+        <button type="submit" class="btn-primary btn-fuel">Save fuelling</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Fuel history</h2>
+      <div id="fuelList"></div>
+    </div>
+  </section>
+
+  <!-- REPORT TAB -->
+  <section id="tab-report" class="tab">
+    <div class="card no-print">
+      <h2>Monthly report</h2>
+      <label>Month</label>
+      <input type="month" id="r_month">
+      <label>Vehicle</label>
+      <select id="r_vehicle"><option value="">All vehicles</option></select>
+      <button class="btn-primary" id="r_generate">Generate report</button>
+    </div>
+    <div id="reportOutput"></div>
+  </section>
+
+  <!-- SETTINGS TAB -->
+  <section id="tab-settings" class="tab">
+    <div class="card">
+      <h2>Vehicles</h2>
+      <form id="vehicleForm">
+        <label>Vehicle number</label>
+        <input type="text" id="v_new" placeholder="e.g. WP CAB-4521" required>
+        <button type="submit" class="btn-primary">Add vehicle</button>
+      </form>
+      <div id="vehicleSettingsList" style="margin-top:14px;"></div>
+      <p style="font-size:12px; color:var(--ink-dim); margin:12px 0 0;">Tap <strong>QR code</strong> next to a vehicle to get a code you can stick on its dashboard — scanning it opens this app with that vehicle already selected on the Trips tab.</p>
+    </div>
+    <div class="card">
+      <h2>Locations</h2>
+      <form id="locationForm">
+        <label>Location name</label>
+        <input type="text" id="l_new" placeholder="e.g. Kandy Depot" required>
+        <button type="submit" class="btn-primary">Add location</button>
+      </form>
+      <div id="locationSettingsList" style="margin-top:14px;"></div>
+    </div>
+  </section>
+
+  <datalist id="vehicleList"></datalist>
+  <datalist id="locationList"></datalist>
+</main>
+
+<nav>
+  <button data-tab="trip" class="active"><span class="ico">🧭</span>Trips</button>
+  <button data-tab="fuel"><span class="ico">⛽</span>Fuel</button>
+  <button data-tab="report"><span class="ico">📋</span>Report</button>
+  <button data-tab="settings"><span class="ico">⚙️</span>Settings</button>
+</nav>
+
+<script>
+const K = { trips:'vrc_trips_v1', fuel:'vrc_fuel_v1', vehicles:'vrc_vehicles_v1', locations:'vrc_locations_v1' };
+function load(key){ try{ const r = localStorage.getItem(key); return r ? JSON.parse(r) : []; } catch(e){ console.error(e); return []; } }
+function save(key, arr){ try{ localStorage.setItem(key, JSON.stringify(arr)); } catch(e){ console.error(e); } }
+let trips = load(K.trips);
+let fuels = load(K.fuel);
+let vehiclesList = load(K.vehicles);
+let locationsList = load(K.locations);
+
+function migrateLists(){
+  let changed = false;
+  trips.forEach(t=>{
+    if(t.vehicle && !vehiclesList.includes(t.vehicle)){ vehiclesList.push(t.vehicle); changed=true; }
+    if(t.from && !locationsList.includes(t.from)){ locationsList.push(t.from); changed=true; }
+    if(t.to && !locationsList.includes(t.to)){ locationsList.push(t.to); changed=true; }
+  });
+  fuels.forEach(f=>{ if(f.vehicle && !vehiclesList.includes(f.vehicle)){ vehiclesList.push(f.vehicle); changed=true; } });
+  if(changed){ vehiclesList.sort(); locationsList.sort(); save(K.vehicles, vehiclesList); save(K.locations, locationsList); }
+}
+function addVehicleToList(name){
+  name = (name||'').trim(); if(!name || vehiclesList.includes(name)) return;
+  vehiclesList.push(name); vehiclesList.sort(); save(K.vehicles, vehiclesList);
+}
+function addLocationToList(name){
+  name = (name||'').trim(); if(!name || locationsList.includes(name)) return;
+  locationsList.push(name); locationsList.sort(); save(K.locations, locationsList);
+}
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const money = n => 'Rs. ' + Number(n).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+
+// --- Tabs ---
+document.querySelectorAll('nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+// --- Vehicle & location lists ---
+function refreshLists(){
+  document.getElementById('vehicleList').innerHTML = vehiclesList.map(v=>`<option value="${escapeHtml(v)}">`).join('');
+  document.getElementById('locationList').innerHTML = locationsList.map(l=>`<option value="${escapeHtml(l)}">`).join('');
+  const sel = document.getElementById('r_vehicle');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">All vehicles</option>' + vehiclesList.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  sel.value = current;
+  renderSettingsLists();
+}
+function renderSettingsLists(){
+  const vWrap = document.getElementById('vehicleSettingsList');
+  vWrap.innerHTML = vehiclesList.length ? vehiclesList.map(v=>`
+    <div class="entry">
+      <div class="entry-top">
+        <div class="entry-title">${escapeHtml(v)}</div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn-qr" data-name="${escapeHtml(v)}" data-action="qr">QR code</button>
+          <button class="del" data-name="${escapeHtml(v)}" data-type="vehicle">Remove</button>
+        </div>
+      </div>
+      <div class="qr-box" id="qr-${cssId(v)}" style="display:none;"></div>
+    </div>`).join('')
+    : '<div class="empty">No vehicles added yet.</div>';
+  const lWrap = document.getElementById('locationSettingsList');
+  lWrap.innerHTML = locationsList.length ? locationsList.map(l=>`
+    <div class="entry"><div class="entry-top"><div class="entry-title">${escapeHtml(l)}</div>
+    <button class="del" data-name="${escapeHtml(l)}" data-type="location">Remove</button></div></div>`).join('')
+    : '<div class="empty">No locations added yet.</div>';
+  vWrap.querySelectorAll('.del').forEach(b=>b.addEventListener('click', onDeleteSetting));
+  vWrap.querySelectorAll('[data-action="qr"]').forEach(b=>b.addEventListener('click', onToggleQr));
+  lWrap.querySelectorAll('.del').forEach(b=>b.addEventListener('click', onDeleteSetting));
+}
+function cssId(s){ return String(s).replace(/[^a-zA-Z0-9_-]/g,'_'); }
+function vehicleUrl(vehicle){
+  const url = new URL(window.location.href);
+  url.search = ''; url.hash = '';
+  url.searchParams.set('vehicle', vehicle);
+  return url.toString();
+}
+function onToggleQr(e){
+  const name = e.target.dataset.name;
+  const box = document.getElementById('qr-'+cssId(name));
+  const isOpen = box.style.display !== 'none';
+  document.querySelectorAll('.qr-box').forEach(b=>b.style.display='none');
+  if(isOpen) return;
+  box.style.display = 'block';
+  box.innerHTML = '<canvas></canvas><div style="font-size:11.5px; color:var(--ink-dim); margin-top:6px;">Scan to open this vehicle\u2019s trip entry</div>';
+  const canvas = box.querySelector('canvas');
+  const url = vehicleUrl(name);
+  if(window.QRCode){
+    QRCode.toCanvas(canvas, url, {width:180, margin:1, color:{dark:'#1a1f26', light:'#ffffff'}}, function(err){
+      if(err){ box.innerHTML = '<div class="empty">Could not generate QR code.</div>'; return; }
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = 'qr-'+cssId(name)+'.png';
+      link.textContent = 'Download QR';
+      box.appendChild(link);
+    });
+  } else {
+    box.innerHTML = '<div class="empty">QR library failed to load.</div>';
+  }
+}
+function onDeleteSetting(e){
+  const name = e.target.dataset.name, type = e.target.dataset.type;
+  if(!confirm('Remove "'+name+'" from the list? Entries already logged with it are unaffected.')) return;
+  if(type==='vehicle'){ vehiclesList = vehiclesList.filter(v=>v!==name); save(K.vehicles, vehiclesList); }
+  else { locationsList = locationsList.filter(l=>l!==name); save(K.locations, locationsList); }
+  refreshLists();
+}
+document.getElementById('vehicleForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  addVehicleToList(document.getElementById('v_new').value);
+  e.target.reset(); refreshLists();
+});
+document.getElementById('locationForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  addLocationToList(document.getElementById('l_new').value);
+  e.target.reset(); refreshLists();
+});
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// --- Trips ---
+const tForm = document.getElementById('tripForm');
+document.getElementById('t_start').addEventListener('input', updateTripDistance);
+document.getElementById('t_end').addEventListener('input', updateTripDistance);
+function updateTripDistance(){
+  const s = parseFloat(document.getElementById('t_start').value);
+  const e = parseFloat(document.getElementById('t_end').value);
+  const el = document.getElementById('t_distance');
+  if(!isNaN(s) && !isNaN(e) && e >= s){ el.textContent = (e-s).toFixed(1) + ' km'; }
+  else if(!isNaN(s) && !isNaN(e) && e < s){ el.textContent = 'end must be ≥ start'; }
+  else { el.textContent = '–'; }
+}
+tForm.addEventListener('submit', e=>{
+  e.preventDefault();
+  const start = parseFloat(document.getElementById('t_start').value);
+  const end = parseFloat(document.getElementById('t_end').value);
+  if(end < start){ alert('End mileage must be greater than or equal to start mileage.'); return; }
+  trips.push({
+    id: uid(),
+    date: document.getElementById('t_date').value,
+    vehicle: document.getElementById('t_vehicle').value.trim(),
+    from: document.getElementById('t_from').value.trim(),
+    to: document.getElementById('t_to').value.trim(),
+    reason: document.getElementById('t_reason').value.trim(),
+    startKm: start, endKm: end, distance: +(end-start).toFixed(1)
+  });
+  save(K.trips, trips);
+  addVehicleToList(trips[trips.length-1].vehicle);
+  addLocationToList(trips[trips.length-1].from);
+  addLocationToList(trips[trips.length-1].to);
+  tForm.reset(); document.getElementById('t_date').value = todayStr(); document.getElementById('t_distance').textContent='–';
+  refreshLists(); renderTrips();
+});
+function renderTrips(){
+  const wrap = document.getElementById('tripList');
+  if(!trips.length){ wrap.innerHTML = '<div class="empty">No trips logged yet.</div>'; return; }
+  const sorted = [...trips].sort((a,b)=> b.date.localeCompare(a.date));
+  wrap.innerHTML = sorted.map(t=>`
+    <div class="entry">
+      <div class="entry-top">
+        <div>
+          <div class="entry-title">${escapeHtml(t.from)} → ${escapeHtml(t.to)}</div>
+          <div class="entry-sub">${t.date} · ${escapeHtml(t.vehicle)} · ${escapeHtml(t.reason)}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="entry-num mono">${t.distance} km</div>
+          <button class="del" data-id="${t.id}" data-type="trip">Delete</button>
+        </div>
+      </div>
+    </div>`).join('');
+  wrap.querySelectorAll('.del').forEach(b=>b.addEventListener('click', onDelete));
+}
+
+// --- Fuel ---
+const fForm = document.getElementById('fuelForm');
+['f_vehicle','f_km','f_liters'].forEach(id=>document.getElementById(id).addEventListener('input', updateFuelAvg));
+function lastFuelBefore(vehicle, km){
+  return fuels.filter(f=>f.vehicle===vehicle && f.fuelKm < km).sort((a,b)=>b.fuelKm-a.fuelKm)[0];
+}
+function updateFuelAvg(){
+  const vehicle = document.getElementById('f_vehicle').value.trim();
+  const km = parseFloat(document.getElementById('f_km').value);
+  const liters = parseFloat(document.getElementById('f_liters').value);
+  const el = document.getElementById('f_avg');
+  if(!vehicle || isNaN(km) || isNaN(liters) || liters<=0){ el.textContent='–'; return; }
+  const prev = lastFuelBefore(vehicle, km);
+  if(!prev){ el.textContent = 'first fill for this vehicle'; return; }
+  const avg = (km - prev.fuelKm)/liters;
+  el.textContent = avg.toFixed(2) + ' km/l';
+}
+fForm.addEventListener('submit', e=>{
+  e.preventDefault();
+  const vehicle = document.getElementById('f_vehicle').value.trim();
+  const km = parseFloat(document.getElementById('f_km').value);
+  const liters = parseFloat(document.getElementById('f_liters').value);
+  const price = parseFloat(document.getElementById('f_price').value);
+  const prev = lastFuelBefore(vehicle, km);
+  const avg = prev ? +(((km - prev.fuelKm)/liters).toFixed(2)) : null;
+  fuels.push({ id: uid(), date: document.getElementById('f_date').value, vehicle, fuelKm: km, liters, price, avg });
+  save(K.fuel, fuels);
+  addVehicleToList(vehicle);
+  fForm.reset(); document.getElementById('f_date').value = todayStr(); document.getElementById('f_avg').textContent='–';
+  refreshLists(); renderFuels();
+});
+function renderFuels(){
+  const wrap = document.getElementById('fuelList');
+  if(!fuels.length){ wrap.innerHTML = '<div class="empty">No fuelling logged yet.</div>'; return; }
+  const sorted = [...fuels].sort((a,b)=> b.date.localeCompare(a.date));
+  wrap.innerHTML = sorted.map(f=>`
+    <div class="entry">
+      <div class="entry-top">
+        <div>
+          <div class="entry-title">${escapeHtml(f.vehicle)}</div>
+          <div class="entry-sub">${f.date} · ${f.liters} L · ${money(f.price)} · odo ${f.fuelKm} km</div>
+        </div>
+        <div style="text-align:right">
+          <div class="entry-num mono">${f.avg!=null ? f.avg+' km/l' : '—'}</div>
+          <button class="del" data-id="${f.id}" data-type="fuel">Delete</button>
+        </div>
+      </div>
+    </div>`).join('');
+  wrap.querySelectorAll('.del').forEach(b=>b.addEventListener('click', onDelete));
+}
+function onDelete(e){
+  const id = e.target.dataset.id, type = e.target.dataset.type;
+  if(!confirm('Delete this entry?')) return;
+  if(type==='trip'){ trips = trips.filter(t=>t.id!==id); save(K.trips, trips); renderTrips(); }
+  else { fuels = fuels.filter(f=>f.id!==id); save(K.fuel, fuels); renderFuels(); }
+}
+
+// --- Report ---
+document.getElementById('r_generate').addEventListener('click', generateReport);
+function generateReport(){
+  const month = document.getElementById('r_month').value; // YYYY-MM
+  const vehicle = document.getElementById('r_vehicle').value;
+  const out = document.getElementById('reportOutput');
+  if(!month){ out.innerHTML = '<div class="card"><div class="empty">Pick a month to generate the report.</div></div>'; return; }
+
+  const mTrips = trips.filter(t=>t.date.startsWith(month) && (!vehicle || t.vehicle===vehicle));
+  const mFuels = fuels.filter(f=>f.date.startsWith(month) && (!vehicle || f.vehicle===vehicle));
+
+  const totalDistance = mTrips.reduce((s,t)=>s+t.distance,0);
+  const totalLiters = mFuels.reduce((s,f)=>s+f.liters,0);
+  const totalCost = mFuels.reduce((s,f)=>s+f.price,0);
+  const validFuels = mFuels.filter(f=>f.avg!=null);
+  const avgDistance = validFuels.reduce((s,f)=>s+f.avg*f.liters,0);
+  const avgLiters = validFuels.reduce((s,f)=>s+f.liters,0);
+  const overallAvg = avgLiters>0 ? avgDistance/avgLiters : null;
+
+  // per-vehicle breakdown
+  const byVehicle = {};
+  mTrips.forEach(t=>{ (byVehicle[t.vehicle] ??= {distance:0, liters:0, cost:0, aSum:0, aLit:0}).distance += t.distance; });
+  mFuels.forEach(f=>{
+    const v = (byVehicle[f.vehicle] ??= {distance:0, liters:0, cost:0, aSum:0, aLit:0});
+    v.liters += f.liters; v.cost += f.price;
+    if(f.avg!=null){ v.aSum += f.avg*f.liters; v.aLit += f.liters; }
+  });
+  const vehicleRows = Object.entries(byVehicle).map(([name,v])=>`
+    <tr><td>${escapeHtml(name)}</td><td>${v.distance.toFixed(1)}</td><td>${v.liters.toFixed(2)}</td>
+    <td>${money(v.cost)}</td><td>${v.aLit>0 ? (v.aSum/v.aLit).toFixed(2) : '—'}</td></tr>`).join('');
+
+  const tripRows = [...mTrips].sort((a,b)=>a.date.localeCompare(b.date)).map(t=>`
+    <tr><td>${t.date}</td><td>${escapeHtml(t.vehicle)}</td><td>${escapeHtml(t.from)} → ${escapeHtml(t.to)}</td>
+    <td>${escapeHtml(t.reason)}</td><td>${t.distance}</td></tr>`).join('');
+
+  const fuelRows = [...mFuels].sort((a,b)=>a.date.localeCompare(b.date)).map(f=>`
+    <tr><td>${f.date}</td><td>${escapeHtml(f.vehicle)}</td><td>${f.liters}</td><td>${money(f.price)}</td>
+    <td>${f.avg!=null ? f.avg+' km/l' : '—'}</td></tr>`).join('');
+
+  out.innerHTML = `
+    <div class="card">
+      <h2>${monthLabel(month)}${vehicle? ' · '+escapeHtml(vehicle):''}</h2>
+      <div class="stat-grid">
+        <div class="stat"><div class="label">Total trips</div><div class="value">${mTrips.length}</div></div>
+        <div class="stat"><div class="label">Total distance</div><div class="value">${totalDistance.toFixed(1)} km</div></div>
+        <div class="stat"><div class="label">Fuel used</div><div class="value">${totalLiters.toFixed(2)} L</div></div>
+        <div class="stat"><div class="label">Fuel cost</div><div class="value">${money(totalCost)}</div></div>
+      </div>
+      <div class="readout" style="margin-top:12px;"><span>Overall fuel average</span><span class="mono">${overallAvg!=null ? overallAvg.toFixed(2)+' km/l' : 'not enough data'}</span></div>
+      <button class="btn-ghost no-print" style="margin-top:12px;" onclick="window.print()">Print / save as PDF</button>
+    </div>
+    ${Object.keys(byVehicle).length>1 ? `
+    <div class="card">
+      <h2>By vehicle</h2>
+      <div class="table-wrap"><table>
+        <tr><th>Vehicle</th><th>Dist (km)</th><th>Fuel (L)</th><th>Cost</th><th>Avg</th></tr>
+        ${vehicleRows}
+      </table></div>
+    </div>` : ''}
+    <div class="card">
+      <h2>Trips (${mTrips.length})</h2>
+      <div class="table-wrap"><table>
+        <tr><th>Date</th><th>Vehicle</th><th>Route</th><th>Reason</th><th>Km</th></tr>
+        ${tripRows || '<tr><td colspan="5" class="empty">No trips this month.</td></tr>'}
+      </table></div>
+    </div>
+    <div class="card">
+      <h2>Fuelling (${mFuels.length})</h2>
+      <div class="table-wrap"><table>
+        <tr><th>Date</th><th>Vehicle</th><th>Litres</th><th>Cost</th><th>Avg</th></tr>
+        ${fuelRows || '<tr><td colspan="5" class="empty">No fuelling this month.</td></tr>'}
+      </table></div>
+    </div>`;
+}
+function monthLabel(m){ const [y,mo] = m.split('-'); return new Date(y, mo-1, 1).toLocaleDateString(undefined,{month:'long', year:'numeric'}); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+// --- init ---
+document.getElementById('t_date').value = todayStr();
+document.getElementById('f_date').value = todayStr();
+document.getElementById('r_month').value = todayStr().slice(0,7);
+migrateLists();
+refreshLists();
+renderTrips();
+renderFuels();
+
+const scannedVehicle = new URLSearchParams(window.location.search).get('vehicle');
+if(scannedVehicle){
+  addVehicleToList(scannedVehicle);
+  refreshLists();
+  document.getElementById('t_vehicle').value = scannedVehicle;
+  document.getElementById('f_vehicle').value = scannedVehicle;
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('nav button[data-tab="trip"]').classList.add('active');
+  document.getElementById('tab-trip').classList.add('active');
+}
+</script>
+</body>
+</html>
