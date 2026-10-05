@@ -1,0 +1,2625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IT Issue Reporting</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#d4d4d7; --card:#e3e3e6; --field:#cfcfd3; --text:#1f1f22; --muted:#66666c; --border:#c2c2c7;
+  --accent:#8e9198; --accent-ink:color-mix(in srgb,var(--accent) 45%,#000); --accent-fg:#151515;
+  --accent-soft:color-mix(in srgb,var(--accent) 24%,var(--card));
+  --danger:#e5484d; --danger-soft:#fdeaea; --warn:#b86e00; --warn-soft:#fff1d9; --ok:#12874f; --ok-soft:#e2f5eb;
+  --p1:#c6c6ca; --p2:#bcbcc1; --p3:#cfcfd3; --pink-ink:#1b1b1b;
+  --radius:18px; --radius-sm:11px; --btn:10px;
+  --font:"Outfit","SamsungOne",-apple-system,"Segoe UI",Roboto,sans-serif;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+:root[data-theme="dark"]{--bg:#1c1c1e;--card:#272729;--field:#323235;--text:#ececee;--muted:#9a9aa0;--border:#39393d;
+  --accent-ink:var(--accent);--accent-soft:color-mix(in srgb,var(--accent) 15%,var(--card));
+  --danger:#ff6b6f;--danger-soft:#3a1d1f;--warn:#f0b04a;--warn-soft:#3a2b12;--ok:#4cc98a;--ok-soft:#12301f;}
+html{font-size:14px;scroll-padding-top:env(safe-area-inset-top,0px);height:100%;}
+*{box-sizing:border-box;}
+body{margin:0;min-height:100%;color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;line-height:1.45;
+  background:var(--bg);background-attachment:fixed;}
+:root[data-theme="dark"] body{background:var(--bg);}
+.wrap{max-width:1180px;margin:0 auto;padding:36px 24px 60px;}
+h1{font-size:1.6rem;margin:2px 0 3px;font-weight:400;letter-spacing:-.01em;line-height:1.2;}
+.sub{color:var(--muted);font-size:.9rem;margin-bottom:22px;}
+.card{background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:14px;}
+label{display:block;font-size:.78rem;font-weight:400;color:var(--muted);margin:16px 0 6px 2px;}
+label:first-child{margin-top:0;}
+input,select,textarea{width:100%;padding:11px 14px;border-radius:var(--btn);border:1px solid transparent;background:var(--field);
+  color:var(--text);font-size:.93rem;font-family:inherit;transition:border-color .15s,background .15s;}
+input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--muted) 70%,transparent);}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent-ink);}
+select{appearance:none;-webkit-appearance:none;padding-right:38px;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238f8f95' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 13px center;}
+textarea{min-height:100px;resize:vertical;}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent-ink);}
+button{cursor:pointer;border:none;border-radius:var(--btn);padding:10px 16px;font-size:.88rem;font-weight:500;font-family:inherit;transition:background .15s,transform .1s,opacity .15s;}
+button:active{transform:scale(.98);}
+button:focus-visible,.nav:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.btn-primary{background:var(--accent);color:var(--accent-fg);width:100%;margin-top:20px;padding:13px 18px;font-size:.95rem;}
+.btn-primary:hover{background:color-mix(in srgb,var(--accent) 86%,#fff);}
+.btn-primary:disabled{opacity:.5;cursor:default;}
+.btn-ghost{background:var(--accent-soft);color:var(--accent-ink);}
+.btn-ghost:hover{background:color-mix(in srgb,var(--accent) 28%,var(--card));}
+.row{display:flex;gap:10px;align-items:center;}
+.grow{flex:1;}
+.badge{display:inline-block;padding:3px 9px;border-radius:7px;font-size:.7rem;font-weight:500;}
+.badge-open{background:var(--danger-soft);color:var(--danger);}
+.badge-in-progress{background:var(--warn-soft);color:var(--warn);}
+.badge-resolved{background:var(--ok-soft);color:var(--ok);}
+.ticket{border-radius:16px;padding:16px 18px;margin-bottom:10px;background:var(--card);}
+.ticket-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.ticket-meta{color:var(--muted);font-size:.76rem;margin-top:5px;}
+.ticket-desc{margin-top:8px;font-size:.9rem;line-height:1.5;}
+.status-select{width:auto;padding:7px 30px 7px 12px;font-size:.78rem;margin-top:10px;background-position:right 10px center;}
+.empty{color:var(--muted);text-align:center;padding:34px 14px;background:var(--card);border-radius:var(--radius);font-size:.88rem;}
+.loc-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);}
+.loc-item:last-child{border-bottom:none;}
+.loc-name{font-weight:500;}
+.loc-count{color:var(--muted);font-size:.76rem;}
+.qr-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;animation:fade .18s ease;}
+.qr-modal{background:var(--card);border-radius:22px;padding:24px;max-width:340px;width:100%;text-align:center;animation:pop .22s ease;}
+@keyframes fade{from{opacity:0}}
+@keyframes pop{from{opacity:0;transform:translateY(12px) scale(.97)}}
+.qr-modal canvas,.qr-modal img{max-width:100%;border-radius:12px;}
+#qrCanvas{display:flex;justify-content:center;}
+.qr-modal .url{font-size:.68rem;color:var(--muted);word-break:break-all;margin:10px 0;}
+.msg{text-align:center;padding:80px 16px;}
+.msg .big{font-size:2.2rem;margin-bottom:6px;}
+.msg .ok-ico{width:70px;height:70px;margin:0 auto 16px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center;}
+.msg .ok-ico svg{width:32px;height:32px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
+.add-row{display:flex;gap:8px;margin-top:6px;}
+.add-row input{flex:1;}
+.add-row button{white-space:nowrap;}
+.link-btn{background:none;border:none;color:var(--accent-ink);font-size:.78rem;padding:0;font-weight:500;}
+table{width:100%;border-collapse:collapse;}
+.brand{display:flex;align-items:center;gap:10px;font-weight:500;font-size:1rem;padding:2px 6px 22px;}
+.form-brand{padding:0 0 24px;}
+.logo{width:38px;height:38px;flex:none;border-radius:12px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-size:.75rem;font-weight:600;}
+.shell{display:grid;grid-template-columns:76px 1fr;min-height:100vh;}
+.side{position:sticky;top:0;align-self:start;height:100vh;background:color-mix(in srgb,var(--card) 70%,var(--bg));padding:22px 0;display:flex;flex-direction:column;align-items:center;gap:8px;}
+:root[data-theme="dark"] .side{background:#202022;}
+.side .brand{padding:0 0 24px;justify-content:center;}
+.side .bt,.side .nav span{display:none;}
+.nav{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:13px;color:var(--muted);cursor:pointer;transition:background .15s,color .15s;}
+.nav:hover{background:var(--field);color:var(--text);}
+.nav.active{background:var(--accent);color:var(--accent-fg);}
+.nav svg{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.nav-sep{height:1px;width:28px;background:var(--border);margin:8px 0;}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.side-foot a{text-decoration:none;}
+.main{padding:30px 34px 60px;max-width:1480px;width:100%;min-width:0;}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
+.chip-user{display:flex;align-items:center;gap:10px;flex:none;}
+.chip-user .avatar{width:38px;height:38px;border-radius:50%;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-weight:600;}
+.chip-user b{display:block;font-weight:500;font-size:.88rem;line-height:1.2;}
+.chip-user span{color:var(--muted);font-size:.76rem;}
+.ct{font-size:1rem;margin:0 0 12px;font-weight:500;}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px;}
+.stat{background:var(--p1);color:#1b1b1b;border-radius:var(--radius);padding:16px 18px;}
+.stat:nth-child(3n+2){background:var(--p2);}
+.stat:nth-child(3n+3){background:var(--p3);}
+.stat b{display:block;font-size:1.6rem;font-weight:500;letter-spacing:-.02em;color:inherit!important;}
+.stat span{color:rgba(0,0,0,.6);font-size:.76rem;}
+.bar-row{display:grid;grid-template-columns:120px 1fr 30px;gap:10px;align-items:center;font-size:.82rem;padding:5px 0;}
+.bar{height:7px;background:var(--field);border-radius:7px;overflow:hidden;}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:7px;}
+.stat .bar{background:rgba(0,0,0,.12);}.stat .bar i{background:#1b1b1b;}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:8px;}
+.swatches{display:flex;gap:10px;flex-wrap:wrap;}
+.sw{width:30px;height:30px;padding:0;border-radius:50%;border:3px solid var(--card);box-shadow:0 0 0 1px var(--border);}
+.sw.on{box-shadow:0 0 0 2px var(--text);}
+.copy-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
+.copy-row input{flex:1;font-size:.8rem;}
+.tbl{width:100%;border-collapse:collapse;font-size:.82rem;white-space:nowrap;}
+.tbl th{text-align:left;padding:11px 14px;color:var(--muted);font-size:.72rem;font-weight:500;background:var(--field);}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border);}
+.tbl tbody tr:last-child td{border-bottom:none;}
+.tbl tbody tr:hover{background:var(--field);}
+details.card>summary{cursor:pointer;font-weight:500;list-style:none;}
+details.card>summary::-webkit-details-marker{display:none;}
+.chips{display:flex;flex-wrap:wrap;gap:7px;}
+.chips label{margin:0;display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:9px;font-size:.82rem;cursor:pointer;background:var(--field);color:var(--text);}
+.chips input{width:auto;margin:0;}
+.chips label:has(input:checked){background:var(--accent);color:var(--accent-fg);}
+.exp-row{display:grid;grid-template-columns:1fr 110px 40px;gap:8px;margin-bottom:8px;}
+.exp-row button{padding:0;}
+.day-h{display:flex;justify-content:space-between;align-items:baseline;margin:20px 0 8px 2px;font-weight:500;}
+.day-h span{color:var(--muted);font-size:.78rem;}
+.edit-modal{text-align:left;max-width:500px;max-height:90vh;overflow-y:auto;}
+.seg{display:inline-grid;grid-template-columns:1fr 1fr;gap:3px;background:var(--card);border-radius:12px;padding:4px;margin-bottom:18px;min-width:min(100%,400px);}
+.seg button{background:none;color:var(--muted);padding:9px 14px;font-size:.85rem;}
+.seg button.on{background:var(--field);color:var(--text);}
+a.btn-ghost{display:inline-block;text-decoration:none;border-radius:var(--btn);padding:10px 16px;font-size:.88rem;font-weight:500;text-align:center;}
+.hist{border-left:2px solid var(--border);margin-left:8px;padding:0 0 16px 18px;position:relative;}
+.hist:before{content:"";position:absolute;left:-6px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--accent);}
+.hist b{font-size:.86rem;font-weight:500;}
+.note-item{background:var(--field);border-radius:10px;padding:9px 12px;font-size:.82rem;line-height:1.45;}
+.acts{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:14px;}
+.acts button{padding:11px 2px;font-size:.76rem;background:var(--field);color:var(--text);}
+.acts button.on{background:var(--accent);color:var(--accent-fg);}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px 24px;}
+.fgrid .full,.full{grid-column:1/-1;}
+.fgrid label{margin:0 0 6px 2px;}
+.fgrid .stack{display:flex;flex-direction:column;gap:18px;}
+.req-grid{display:grid;grid-template-columns:1fr 130px;gap:14px;}
+.banner{background:var(--accent-soft);color:var(--accent-ink);border-radius:12px;padding:11px 16px;font-size:.85rem;margin:0 0 18px;}
+.cam{position:relative;aspect-ratio:4/3;border-radius:16px;overflow:hidden;background:#0b0b0d;}
+.cam video{width:100%;height:100%;object-fit:cover;display:block;}
+.cam-frame{position:absolute;inset:18%;border:2px solid rgba(255,255,255,.9);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.3);pointer-events:none;}
+.cam-hint{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;color:#cfd1d8;font-size:.85rem;}
+.prio-preview{display:flex;align-items:center;gap:10px;margin-top:18px;padding:11px 14px;border-radius:var(--radius-sm);background:var(--field);font-size:.8rem;color:var(--muted);line-height:1.45;}
+.prio-preview .badge{flex:none;}
+.prio-preview + .btn-primary{margin-top:14px;}
+@media(max-width:900px){.fgrid,.two{grid-template-columns:1fr;}.req-grid{grid-template-columns:1fr 100px;}}
+@media(max-width:760px){
+  .wrap{padding:26px 14px 50px;}
+  h1{font-size:1.4rem;}
+  .shell{grid-template-columns:1fr;}
+  .side{position:fixed;top:auto;bottom:0;left:10px;right:10px;height:auto;z-index:40;flex-direction:row;align-items:center;justify-content:space-around;gap:2px;
+    padding:6px;margin-bottom:calc(8px + env(safe-area-inset-bottom,0px));border-radius:20px;
+    background:var(--card);overflow-x:auto;}
+  :root[data-theme="dark"] .side{background:#202022;}
+  .side .brand,.nav-sep{display:none;}
+  .side-foot{margin:0;flex-direction:row;gap:2px;}
+  .nav{flex:1;width:auto;min-width:42px;}
+  .main{padding:24px 14px calc(96px + env(safe-area-inset-bottom,0px));}
+  .chip-user div:last-child{display:none;}
+}
+
+.xbox{margin-top:16px;padding:14px;border-radius:var(--radius-sm);background:var(--field);}
+.xh{font-size:.78rem;color:var(--muted);margin:12px 0 8px 2px;}.xh:first-child{margin-top:0;}
+.xrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:8px;align-items:center;}
+.xbox input,.xbox select{background:var(--card);}
+.xchk{display:flex;align-items:center;gap:8px;margin:0;color:var(--text);font-size:.88rem;}
+.xchk input[type=checkbox]{width:auto;margin:0;flex:none;}
+.xdvr{padding:12px;border-radius:var(--radius-sm);background:var(--card);margin-bottom:10px;}
+.xdvr .xbox,.xdvr input{background:var(--field);}
+.xcams{margin-top:8px;}
+.xbox button{padding:9px 12px;}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+
+
+
+</head>
+<body>
+<div class="wrap" id="app"><div class="msg"><p class="sub">Loading…</p></div></div>
+
+<script>
+const CATEGORIES = ["Hardware","Software","Network/Wi-Fi","Printer","Account/Access","POS Terminal","Other"];
+const URGENCY = ["Low","Medium","High","Critical"];
+const STATUSES = ["open","in-progress","resolved"];
+const URGENCY_HOURS = {Critical:4, High:24, Medium:72, Low:168};
+
+// ---------- AUTO PRIORITY: worked out from product / service / issue details, never picked by hand ----------
+// score 0-3 -> URGENCY = Low, Medium, High, Critical
+const RX = {
+  critical: /pos|till|checkout|router|switch|server|firewall|network|wi-?fi|internet|access point|payment|card machine|vpn/,
+  standard: /laptop|desktop|pc\b|computer|monitor|printer|scanner|tablet|phone|ups\b|battery/,
+  access:   /account|password|login|log in|email|e-?mail|permission|access|licen[sc]e/,
+  blocking: /down|dead|not (working|turning|starting|booting|printing|connecting)|won'?t|cannot|can'?t|unable|crash|outage|offline|no internet|stopped|broken|failed|error|urgent|emergency|asap/,
+  wide:     /everyone|all (users|staff|terminals|tills|computers|pcs)|entire|whole (store|branch|office|shop)|outage|customers|billing|payments?|sales/,
+  minor:    /slow|minor|sometimes|cosmetic|no rush|when possible|whenever|not urgent|nice to have/,
+  newstaff: /new (staff|joiner|employee|starter|hire)|joining|first day|onboard|opening|launch/,
+  replace:  /replace|broken|dead|damaged|faulty|lost|stolen/
+};
+function autoPriority({mode, category, item, desc, asset, qty}){
+  const text = ((item || '') + ' ' + (desc || '')).toLowerCase();
+  let score = 0; const why = [];
+  const add = (n, r) => { score += n; why.push(r); };
+  if (mode === 'request') {
+    const isService = category === 'Service';
+    if (RX.critical.test(text)) add(2, (isService ? 'service' : 'product') + ' is business-critical');
+    else if (isService && RX.access.test(text)) add(1, 'affects someone\'s access to work');
+    else if (RX.standard.test(text)) add(1, 'standard work equipment');
+    else add(0, isService ? 'routine service' : 'low-impact item');
+    if (RX.replace.test(text)) add(1, 'replacing something broken or lost');
+    if (RX.newstaff.test(text)) add(1, 'needed for new staff / launch');
+    if (RX.blocking.test(text) && !RX.replace.test(text)) add(1, 'work is blocked');
+    if (RX.minor.test(text)) add(-1, 'marked as non-urgent');
+  } else {
+    const catBase = {'POS Terminal':2, 'Network/Wi-Fi':2, 'Account/Access':1, Hardware:1, Software:1, Printer:1, Other:0}[category];
+    const assetBase = asset ? typeBase(asset.type) : 0;
+    const base = Math.max(catBase == null ? 1 : catBase, assetBase);
+    add(base, base === 2 ? (asset && assetBase === 2 ? asset.type : category) + ' is business-critical' : base === 1 ? 'standard work issue' : 'low-impact issue');
+    if (asset && (asset.condition || 'Good') === 'Damaged') add(1, 'asset condition is Damaged');
+    if (RX.blocking.test(text)) add(1, 'work is blocked');
+    if (RX.wide.test(text)) add(1, 'affects many people or customers');
+    if (RX.minor.test(text)) add(-1, 'marked as minor');
+  }
+  score = Math.max(0, Math.min(URGENCY.length - 1, score));
+  return {level: URGENCY[score], reasons: why};
+}
+
+// ========== FIREBASE CONFIG — replace with your own from Firebase console ==========
+const firebaseConfig = {
+  apiKey: "AIzaSyCA8gPnXDlxN1eWoazJMA9UjC3Zqg88v00",
+  authDomain: "itndsticket.firebaseapp.com",
+  projectId: "itndsticket",
+  storageBucket: "itndsticket.firebasestorage.app",
+  messagingSenderId: "403748061583",
+  appId: "1:403748061583:web:5bea3c7088517b418f4bfa"
+};
+// =====================================================================================
+
+let dbError = '';
+function loadScript(src){
+  return new Promise(res => { const el = document.createElement('script'); el.src = src; el.onload = () => res(true); el.onerror = () => res(false); document.head.appendChild(el); });
+}
+async function ensureFirebase(){
+  if (window.firebase && firebase.firestore) return;
+  // primary CDN failed or was blocked — try a fallback mirror
+  const base = 'https://cdn.jsdelivr.net/npm/firebase@10.7.1/';
+  await loadScript(base + 'firebase-app-compat.js');
+  await loadScript(base + 'firebase-firestore-compat.js');
+}
+function initFirestore(){
+  try {
+    if (firebaseConfig.apiKey === "YOUR_API_KEY") { dbError = 'The Firebase config still has placeholder values.'; return null; }
+    if (!window.firebase || !firebase.firestore) { dbError = 'The Firebase library could not be loaded (offline, or gstatic.com / jsdelivr.net is blocked by a network, ad-blocker or CSP).'; return null; }
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const fdb = firebase.firestore();
+    try { fdb.settings({experimentalAutoDetectLongPolling: true, merge: true}); } catch(e){}
+    return {
+      doc(path){
+        const ref = fdb.doc(path);
+        return {
+          async set(data){ return ref.set(data, {merge:true}); },
+          async update(data){ return ref.update(data); },
+          async delete(){ return ref.delete(); },
+          async get(){ const snap = await ref.get(); return snap.exists ? {data: snap.data()} : null; }
+        };
+      },
+      collection(path){
+        const ref = fdb.collection(path);
+        return {
+          async get(){ const snap = await ref.get(); return {docs: snap.docs.map(d => ({data: d.data()}))}; }
+        };
+      }
+    };
+  } catch(e){ dbError = (e && e.message) || 'Firebase failed to initialise.'; return null; }
+}
+
+let db = null;
+const params = new URLSearchParams(location.search);
+const view = params.get('view'); // 'form' or 'admin' — no other way in
+
+function pageBaseUrl(){
+  return location.origin + location.pathname;
+}
+function formUrl(){ return pageBaseUrl() + '?view=form'; }
+function adminUrl(){ return pageBaseUrl() + '?view=admin'; }
+
+async function init(){
+  await ensureFirebase();
+  db = initFirestore();
+  try {
+    await loadSettings();
+    if (view === 'form') {
+      await renderForm();
+    } else if (view === 'stock') {
+      adminTab = 'stock'; await renderAdmin();
+    } else if (view === 'asset') {
+      await renderAssetPage(params.get('id'));
+    } else {
+      await renderAdmin();
+    }
+  } catch(e){
+    document.getElementById('app').innerHTML = '<div class="msg"><div class="big">⚠️</div><h1>Something went wrong</h1><p class="sub">' + escapeHtml(e && e.message ? e.message : 'Please refresh the page.') + '</p></div>';
+  }
+}
+
+// ---------- FORM VIEW ----------
+async function renderForm(){
+  const app = document.getElementById('app');
+  const locations = db ? await fetchAll('locations') : [];
+  const assets = db ? await fetchAll('assets') : [];
+  locations.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  const assetOptions = (locId) => {
+    const filtered = assets.filter(a => a.locationId === locId);
+    return '<option value="">None</option>' + filtered.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
+  };
+  app.classList.add('form-wrap');
+  app.innerHTML = `
+    <div class="brand form-brand"><div class="logo">IT</div><span>${escapeHtml(SETTINGS.orgName)}</span></div>
+    <h1 id="f_title">Report an IT Issue</h1>
+    <div class="sub">Fill this in and IT will pick it up.</div>
+    <div class="seg"><button data-t="issue" class="on">Report an issue</button><button data-t="request">Request product / service</button></div>
+    <div class="card">
+      <div class="fgrid">
+        <div class="stack">
+          <div><label>Location</label>
+          <select id="f_loc">
+            ${locations.length ? locations.map(l=>`<option value="${l.id}">${escapeHtml(l.name)}</option>`).join('') : '<option value="">No locations set up yet</option>'}
+          </select></div>
+          <div id="f_assetWrap"><label>Related asset (optional)</label>
+          <select id="f_asset">${locations.length ? assetOptions(locations[0].id) : '<option value="">None</option>'}</select></div>
+          <div><label>Person raising the ticket</label>
+          <input id="f_name" type="text" placeholder="e.g. Nadeesha Perera"></div>
+          <div><label>Department</label>
+          <input id="f_dept" type="text" placeholder="e.g. Sales, Warehouse"></div>
+        </div>
+        <div class="stack">
+          <div><label id="f_catL">Request</label>
+          <select id="f_cat">${CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
+          <div id="f_reqWrap" class="req-grid" style="display:none;">
+            <div><label>Item / service requested</label>
+            <input id="f_item" type="text" placeholder="e.g. Wireless mouse, Email account setup"></div>
+            <div><label>Quantity</label>
+            <input id="f_qty" type="number" min="1" value="1"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;flex:1;"><label id="f_descL">Issue</label>
+          <textarea id="f_desc" style="flex:1;min-height:170px;" placeholder="What's happening? What have you already tried?"></textarea></div>
+        </div>
+        <div class="full">
+          <div class="prio-preview" id="f_prio" style="margin-top:0;"></div>
+          <button class="btn-primary" id="submitBtn">Submit Ticket</button>
+          <div id="formMsg" class="ticket-meta" style="margin-top:10px;"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('f_loc').onchange = (e) => {
+    document.getElementById('f_asset').innerHTML = assetOptions(e.target.value);
+  };
+  let mode = 'issue';
+  const $ = x => document.getElementById(x);
+  const setMode = m => {
+    mode = m;
+    app.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.t === m));
+    const rq = m === 'request';
+    $('f_assetWrap').style.display = rq ? 'none' : '';
+    $('f_reqWrap').style.display = rq ? '' : 'none';
+    $('f_cat').innerHTML = (rq ? REQUEST_TYPES : CATEGORIES).map(c => `<option value="${c}">${c}</option>`).join('');
+    $('f_catL').textContent = rq ? 'Product or service' : 'Request';
+    $('f_descL').textContent = rq ? 'Details / reason (optional)' : 'Issue';
+    $('f_desc').placeholder = rq ? 'Why is this needed? Any model or specification?' : "What's happening? What have you already tried?";
+    $('f_title').textContent = rq ? 'Request an IT Product or Service' : 'Report an IT Issue';
+    $('submitBtn').textContent = rq ? 'Submit Request' : 'Submit Ticket';
+    $('formMsg').textContent = '';
+    showPrio();
+  };
+  const showPrio = () => {
+    const rq = mode === 'request';
+    const asset = rq ? null : assets.find(a => a.id === $('f_asset').value);
+    const pr = autoPriority({mode, category:$('f_cat').value, item:$('f_item').value, desc:$('f_desc').value, asset, qty:$('f_qty').value});
+    $('f_prio').innerHTML = `<span class="badge ${prioBadge(pr.level)}">${pr.level} priority</span><span>Set automatically: ${escapeHtml(pr.reasons.join(', '))}.</span>`;
+  };
+  ['f_loc','f_asset','f_cat','f_item','f_qty','f_desc'].forEach(id => { $(id).addEventListener('input', showPrio); $(id).addEventListener('change', showPrio); });
+  showPrio();
+  app.querySelectorAll('.seg button').forEach(b => b.onclick = () => setMode(b.dataset.t));
+  $('submitBtn').onclick = () => submitTicket(locations, assets, mode);
+  const preId = params.get('asset'); const pa = preId && assets.find(x => x.id === preId);
+  if (pa) {
+    document.getElementById('f_loc').value = pa.locationId;
+    document.getElementById('f_asset').innerHTML = assetOptions(pa.locationId);
+    document.getElementById('f_asset').value = pa.id;
+  }
+}
+
+async function submitTicket(locations, assets, mode = 'issue'){
+  const locId = document.getElementById('f_loc').value;
+  const loc = locations.find(l => l.id === locId);
+  const isReqM = mode === 'request';
+  const assetId = isReqM ? '' : document.getElementById('f_asset').value;
+  const asset = assets.find(a => a.id === assetId);
+  const name = document.getElementById('f_name').value.trim();
+  const dept = document.getElementById('f_dept').value.trim();
+  const desc = document.getElementById('f_desc').value.trim();
+  const cat = document.getElementById('f_cat').value;
+  let urg = 'Medium', pr = null;
+  const msgEl = document.getElementById('formMsg');
+  if (!locId) { msgEl.textContent = "Please select a location."; msgEl.style.color = 'var(--danger)'; return; }
+  const item = document.getElementById('f_item').value.trim();
+  const qty = Math.max(1, parseInt(document.getElementById('f_qty').value, 10) || 1);
+  pr = autoPriority({mode, category:cat, item, desc, asset, qty}); urg = pr.level;
+  if (isReqM && !item) { msgEl.textContent = "Please say what you are requesting."; msgEl.style.color = 'var(--danger)'; return; }
+  if (!isReqM && !desc) { msgEl.textContent = "Please describe the issue."; msgEl.style.color = 'var(--danger)'; return; }
+  if (!db) { msgEl.textContent = "This form isn't connected to a database yet — contact the site admin." + (dbError ? " (" + dbError + ")" : ""); msgEl.style.color='var(--danger)'; return; }
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = "Submitting…";
+  const id = 't_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+  const createdAt = Date.now();
+  try {
+    await db.doc('tickets/' + id).set({
+      id, locationId: locId, locationName: loc ? loc.name : locId,
+      assetId: assetId || null, assetName: asset ? asset.name : null,
+      reporterName: name || 'Anonymous', department: dept,
+      category: cat, urgency: urg, urgencyAuto: true, priorityReasons: pr.reasons, description: desc,
+      status: 'open', assignedTo: '',
+      dueBy: isReqM ? null : createdAt + (URGENCY_HOURS[urg] || 72) * 3600000,
+      ticketType: mode, itemName: isReqM ? item : '', quantity: isReqM ? qty : null, approval: isReqM ? 'pending' : null,
+      createdAt
+    });
+    document.getElementById('app').innerHTML = `
+      <div class="msg"><div class="ok-ico"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h1>${isReqM ? 'Request submitted' : 'Ticket submitted'}</h1>
+      <p class="sub">IT has been notified. Thanks!</p></div>`;
+  } catch(e){
+    btn.disabled = false; btn.textContent = isReqM ? "Submit Request" : "Submit Ticket";
+    msgEl.textContent = "Couldn't submit — please check your connection and try again.";
+    msgEl.style.color = 'var(--danger)';
+  }
+}
+
+// ---------- ADMIN VIEW ----------
+let adminTab = 'tickets';
+let statusFilter = 'all';
+let locFilter = 'all';
+let assetLocFilter = 'all';
+
+const SETTINGS = {orgName:'IT Desk', currency:'LKR', theme:'dark', accent:'#8e9198'};
+const ICONS = {
+  tickets:'<path d="M3 9V6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v3a2.5 2.5 0 0 0 0 5v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3a2.5 2.5 0 0 0 0-5z"/><path d="M9 8v8"/>',
+  reports:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  assets:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  locations:'<path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  work:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4v2h6V4M9 11h6M9 15h4"/>',
+  stock:'<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 12h8"/>',
+  settings:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>'
+};
+const NAV = [
+  ['tickets','Tickets','Track, assign and resolve reported issues.'],
+  ['reports','Reports','Trends, workload and resolution stats.'],
+  ['assets','IT Assets','Keep an inventory of devices per location.'],
+  ['work','Work Log','Log daily work with locations, notes and expenses.'],
+  ['stock','Stock take','Scan asset QR codes once a year to confirm every asset is available.'],
+  ['locations','Locations & QR','Manage sites and share the report form.'],
+  ['settings','Settings','Organisation, locations, asset types, appearance and data.']
+];
+const ACCENTS = ['#8e9198','#6f737a','#a9acb2','#f7d0ab','#a9d0de','#3e91ff','#4f46e5','#0e8f52','#e0332f','#c8720a','#9333ea'];
+
+function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+function lsSet(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+function applyAppearance(){
+  const dark = SETTINGS.theme === 'dark' || (SETTINGS.theme === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  document.documentElement.style.setProperty('--accent', SETTINGS.accent);
+  const hx = String(SETTINGS.accent).replace('#',''), lum = 0.299*parseInt(hx.slice(0,2),16) + 0.587*parseInt(hx.slice(2,4),16) + 0.114*parseInt(hx.slice(4,6),16);
+  document.documentElement.style.setProperty('--accent-fg', lum > 150 ? '#151515' : '#ffffff');
+}
+async function loadSettings(){
+  SETTINGS.theme = lsGet('it_theme') || 'dark';
+  SETTINGS.accent = lsGet('it_accent') || '#8e9198';
+  applyAppearance();
+  if (!db) return;
+  try {
+    const r = await db.doc('settings/general').get();
+    if (r && r.data) {
+      if (r.data.orgName) SETTINGS.orgName = r.data.orgName;
+      if (r.data.currency !== undefined) SETTINGS.currency = r.data.currency;
+      if (Array.isArray(r.data.assetTypes) && r.data.assetTypes.length) { ASSET_TYPES.length = 0; ASSET_TYPES.push(...r.data.assetTypes); }
+      if (!ASSET_TYPES.some(t => /cctv/i.test(t))) { const i = ASSET_TYPES.indexOf('Other'); if (i < 0) ASSET_TYPES.push('CCTV'); else ASSET_TYPES.splice(i, 0, 'CCTV'); }
+    }
+  } catch(e){}
+}
+
+// ---------- SIGN-IN (admin + location users) ----------
+const USER_TABS = ['tickets','reports','assets'];
+let SESSION = null;
+const getStoredSession = () => { try { return JSON.parse(sessionStorage.getItem('it_session') || 'null'); } catch(e){ return null; } };
+const storeSession = v => { try { v ? sessionStorage.setItem('it_session', JSON.stringify(v)) : sessionStorage.removeItem('it_session'); } catch(e){} };
+const isAdmin = () => !!SESSION && SESSION.role === 'admin';
+const userSession = u => ({role:'user', id:u.id, name:u.name || u.username, locationIds:u.locationIds || []});
+async function restoreSession(){
+  const st = getStoredSession();
+  if (!st) return null;
+  if (st.role === 'admin') return {role:'admin', name:'Admin'};
+  try { const r = await db.doc('users/' + st.id).get(); if (r && r.data) return userSession(r.data); } catch(e){}
+  return null;
+}
+const toHex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+const newSalt = () => toHex(crypto.getRandomValues(new Uint8Array(16)));
+async function hashPw(user, pw, saltHex){
+  if (!(window.crypto && crypto.subtle)) throw new Error('Secure login needs HTTPS (or localhost).');
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(user.toLowerCase() + ':' + pw), 'PBKDF2', false, ['deriveBits']);
+  const salt = Uint8Array.from(saltHex.match(/../g).map(h => parseInt(h, 16)));
+  return toHex(await crypto.subtle.deriveBits({name:'PBKDF2', salt, iterations:150000, hash:'SHA-256'}, key, 256));
+}
+let loginFails = 0;
+async function renderLogin(){
+  const app = document.getElementById('app');
+  app.className = 'wrap';
+  let cred = null;
+  try { const r = await db.doc('settings/auth').get(); cred = r && r.data; }
+  catch(e){ app.innerHTML = `<div class="msg"><div class="big">⚠️</div><h1>Can't check login</h1><p class="sub">Check your connection and Firestore rules (settings), then refresh.</p></div>`; return; }
+  const setup = !cred;
+  app.innerHTML = `
+    <div style="max-width:420px;margin:7vh auto 0;">
+      <div class="brand" style="padding:0 0 18px;"><div class="logo">IT</div><span>${escapeHtml(SETTINGS.orgName)}</span></div>
+      <div class="card">
+        <h2 class="ct">${setup ? 'Set up the admin login' : 'Sign in'}</h2>
+        <div class="ticket-meta">${setup ? 'Create the administrator username and password for this dashboard.' : 'Use your admin or location user account.'}</div>
+        <label>Username</label><input id="l_user" type="text" autocomplete="username">
+        <label>Password</label><input id="l_pw" type="password" autocomplete="${setup ? 'new-password' : 'current-password'}">
+        ${setup ? '<label>Confirm password</label><input id="l_pw2" type="password" autocomplete="new-password">' : ''}
+        <button class="btn-primary" id="l_go">${setup ? 'Create admin login' : 'Sign in'}</button>
+        <div id="l_msg" class="ticket-meta" style="margin-top:10px;"></div>
+      </div>
+    </div>`;
+  const msg = document.getElementById('l_msg');
+  const err = t => { msg.style.color = 'var(--danger)'; msg.textContent = t; };
+  const go = async () => {
+    const user = document.getElementById('l_user').value.trim(), pw = document.getElementById('l_pw').value;
+    const btn = document.getElementById('l_go'); btn.disabled = true;
+    try {
+      if (setup) {
+        if (user.length < 3) return err('Username must be at least 3 characters.');
+        if (pw.length < 6) return err('Password must be at least 6 characters.');
+        if (pw !== document.getElementById('l_pw2').value) return err('Passwords do not match.');
+        const salt = newSalt();
+        await db.doc('settings/auth').set({user, salt, hash: await hashPw(user, pw, salt)});
+        SESSION = {role:'admin', name:'Admin'};
+      } else {
+        if (loginFails) await new Promise(r => setTimeout(r, Math.min(loginFails, 5) * 1000));
+        const uname = user.toLowerCase();
+        if (uname === (cred.user || '').toLowerCase()) {
+          if ((await hashPw(cred.user, pw, cred.salt)) === cred.hash) SESSION = {role:'admin', name:'Admin'};
+        } else {
+          const u = (await fetchAll('users')).find(x => (x.username || '').toLowerCase() === uname);
+          if (u && (await hashPw(u.username, pw, u.salt)) === u.hash) SESSION = userSession(u);
+        }
+        if (!SESSION) { loginFails++; return err('Incorrect username or password.'); }
+      }
+      loginFails = 0; storeSession({role: SESSION.role, id: SESSION.id}); adminTab = 'tickets'; renderAdmin();
+    } catch(e){ err(e.message || 'Something went wrong.'); }
+    finally { btn.disabled = false; }
+  };
+  document.getElementById('l_go').onclick = go;
+  app.querySelectorAll('input').forEach(i => i.onkeydown = e => { if (e.key === 'Enter') go(); });
+  document.getElementById('l_user').focus();
+}
+
+async function renderAdmin(){
+  const app = document.getElementById('app');
+  if (!db) { app.className = 'wrap'; app.innerHTML = `<div class="msg"><div class="big">⚠️</div><h1>Couldn't connect to Firebase</h1><p class="sub">${escapeHtml(dbError || 'Check the config near the top of the script.')}</p></div>`; return; }
+  if (!SESSION) SESSION = await restoreSession();
+  if (!SESSION) { await renderLogin(); return; }
+  stopScan(); await loadStock();
+  const allowed = isAdmin() ? NAV : NAV.filter(n => USER_TABS.includes(n[0]) || (n[0] === 'stock' && stockOpen()));
+  if (!allowed.some(n => n[0] === adminTab)) adminTab = 'tickets';
+  const cur = allowed.find(n => n[0] === adminTab);
+  app.className = 'shell';
+  app.innerHTML = `
+    <aside class="side">
+      <div class="brand"><div class="logo">IT</div><span class="bt">${escapeHtml(SETTINGS.orgName)}</span></div>
+      <div class="ticket-meta bt" style="margin:-12px 0 14px;padding:0 10px;">👤 ${escapeHtml(SESSION.name)}${isAdmin() ? '' : ' · location user'}</div>
+      ${allowed.map(n => `<div class="nav ${adminTab===n[0]?'active':''}" data-tab="${n[0]}" title="${n[1]}"><svg viewBox="0 0 24 24">${ICONS[n[0]]}</svg><span>${n[1]}</span></div>`).join('')}
+      <div class="side-foot"><div class="nav-sep"></div>
+        <div class="nav" id="signOut" title="Sign out"><svg viewBox="0 0 24 24"><path d="M9 21H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4M16 17l5-5-5-5M21 12H9"/></svg><span>Sign out</span></div>
+        <a class="nav" href="${formUrl()}" target="_blank" title="Open public form"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg><span>Public form</span></a>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="topbar"><div><h1>${cur[1]}</h1><div class="sub">${cur[2]}</div></div>
+        <div class="chip-user"><div class="avatar">${escapeHtml((SESSION.name || 'A').trim().charAt(0).toUpperCase())}</div><div><b>${escapeHtml(SESSION.name)}</b><span>${isAdmin() ? 'Administrator' : 'Location user'}</span></div></div></div>
+      ${adminTab === 'stock' ? '' : stockBanner()}
+      <div id="tabBody"></div>
+    </main>
+  `;
+  app.querySelectorAll('.nav[data-tab]').forEach(t => t.onclick = () => { adminTab = t.dataset.tab; renderAdmin(); });
+  document.getElementById('signOut').onclick = () => { SESSION = null; storeSession(null); adminTab = 'tickets'; renderAdmin(); };
+  if (adminTab === 'tickets') await renderTicketsTab();
+  else if (adminTab === 'reports') await renderReportsTab();
+  else if (adminTab === 'assets') await renderAssetsTab();
+  else if (adminTab === 'stock') await renderStockTab();
+  else if (adminTab === 'work') await renderWorkTab();
+  else if (adminTab === 'settings') await renderSettingsTab();
+  else await renderLocationsTab();
+}
+
+async function fetchAll(collection){
+  try {
+    const snap = await db.collection(collection).get();
+    let rows = (snap && snap.docs) ? snap.docs.map(d => d.data) : [];
+    if (SESSION && SESSION.role === 'user') {   // location users only see their own locations
+      const ids = SESSION.locationIds || [];
+      if (collection === 'tickets' || collection === 'assets' || collection === 'stockscans') rows = rows.filter(r => ids.includes(r.locationId));
+      else if (collection === 'locations') rows = rows.filter(r => ids.includes(r.id));
+      else if (collection === 'worklogs' || collection === 'users') rows = [];
+    }
+    return rows;
+  } catch(e){ return []; }
+}
+
+// A ticket's notes are a list of {text, at, by}. Old tickets kept a single `note` (or `assignedTo`) string — shown as the first note.
+function ticketNotes(t){
+  if (Array.isArray(t.notes)) return t.notes;
+  const legacy = String(t.note != null ? t.note : (t.assignedTo || '')).trim();
+  return legacy ? [{text: legacy, at: 0, by: ''}] : [];
+}
+const notesText = t => ticketNotes(t).map(n => (n.by ? n.by + ': ' : '') + n.text).join(' | ');
+function notesHtml(t){
+  const ns = ticketNotes(t);
+  return ns.length ? `<div style="margin-top:10px;display:grid;gap:6px;">${ns.map(n => `<div class="note-item">
+    <div style="white-space:pre-wrap;">${escapeHtml(n.text)}</div>
+    <div class="ticket-meta" style="margin:3px 0 0;">📝 ${[n.by, n.at ? new Date(n.at).toLocaleString() : ''].filter(Boolean).map(escapeHtml).join(' · ') || 'Note'}</div></div>`).join('')}</div>` : '';
+}
+
+async function renderTicketsTab(){
+  const body = document.getElementById('tabBody');
+  const [tickets, locations] = await Promise.all([fetchAll('tickets'), fetchAll('locations')]);
+  tickets.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+
+  const locOptions = ['all', ...locations.map(l=>l.id)];
+  body.innerHTML = `
+    <div class="row" style="margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <select id="statusFilter" style="width:auto;">
+        <option value="all">All statuses</option>
+        <option value="requests">All requests</option><option value="pending">Requests: pending</option><option value="approved">Requests: approved</option>
+        ${STATUSES.map(s=>`<option value="${s}" ${statusFilter===s?'selected':''}>${label(s)}</option>`).join('')}
+      </select>
+      <select id="locFilter" style="width:auto;">
+        <option value="all">All locations</option>
+        ${locations.map(l=>`<option value="${l.id}" ${locFilter===l.id?'selected':''}>${escapeHtml(l.name)}</option>`).join('')}
+      </select>
+      <button class="btn-ghost" id="exportTicketsCsv" style="margin-left:auto;">Export CSV</button>
+    </div>
+    <div id="ticketList"></div>
+  `;
+  document.getElementById('statusFilter').value = statusFilter;
+  document.getElementById('locFilter').value = locFilter;
+  document.getElementById('statusFilter').onchange = e => { statusFilter = e.target.value; renderTicketsTab(); };
+  document.getElementById('locFilter').onchange = e => { locFilter = e.target.value; renderTicketsTab(); };
+  document.getElementById('exportTicketsCsv').onclick = () => exportCsv('tickets',
+    ['id','ticketType','locationName','assetName','reporterName','department','category','itemName','quantity','urgency','status','approval','note','description','createdAt','dueBy'], tickets.map(t => ({...t, note: notesText(t)})));
+
+  let filtered = tickets;
+  if (statusFilter === 'requests') filtered = filtered.filter(isReq);
+  else if (statusFilter === 'pending' || statusFilter === 'approved') filtered = filtered.filter(t => isReq(t) && (t.approval || 'pending') === statusFilter);
+  else if (statusFilter !== 'all') filtered = filtered.filter(t => !isReq(t) && t.status === statusFilter);
+  if (locFilter !== 'all') filtered = filtered.filter(t => t.locationId === locFilter);
+
+  const list = document.getElementById('ticketList');
+  if (!filtered.length) { list.innerHTML = `<div class="empty">No tickets match this filter.</div>`; return; }
+  const now = Date.now();
+  list.innerHTML = filtered.map(t => {
+    const overdue = !isReq(t) && t.status !== 'resolved' && t.dueBy && t.dueBy < now;
+    return `
+    <div class="ticket">
+      <div class="ticket-top">
+        <div>
+          ${isReq(t) ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent-ink);">Request</span> <span class="badge ${(t.approval||'pending')==='approved'?'badge-resolved':'badge-in-progress'}">${(t.approval||'pending')==='approved'?'Approved':'Pending approval'}</span>` : `<span class="badge badge-${t.status}">${label(t.status)}</span>`}
+          <span class="badge ${prioBadge(t.urgency)}" title="${escapeHtml((t.priorityReasons||[]).join(', '))}">${escapeHtml(t.urgency||'Medium')} priority</span>
+          ${overdue ? '<span class="badge badge-open" style="margin-left:6px;">Overdue</span>' : ''}
+          <div class="ticket-meta">${escapeHtml(t.locationName||t.locationId)}${t.assetName ? ' · ' + escapeHtml(t.assetName) : ''} · ${escapeHtml(t.category)}</div>
+        </div>
+        <div class="ticket-meta">${timeAgo(t.createdAt)}</div>
+      </div>
+      ${isReq(t) ? `<div class="ticket-desc" style="font-weight:600;">${escapeHtml(t.itemName||'')}${t.quantity > 1 ? ' × ' + t.quantity : ''}</div>` : ''}
+      ${t.description ? `<div class="ticket-desc">${escapeHtml(t.description)}</div>` : ''}
+      ${(t.priorityReasons||[]).length ? `<div class="ticket-meta">Priority reason: ${escapeHtml(t.priorityReasons.join(', '))}</div>` : ''}
+      <div class="ticket-meta">Reported by ${escapeHtml(t.reporterName)}${t.department ? ' · ' + escapeHtml(t.department) : ''}${t.dueBy ? ' · Due ' + new Date(t.dueBy).toLocaleString() : ''}</div>
+      ${notesHtml(t)}
+      ${!isAdmin() ? '' : `<div class="row" style="margin-top:11px;flex-wrap:wrap;gap:8px;">
+        ${isReq(t) ? `<select class="approval-select" data-id="${t.id}" style="width:auto;padding:7px 10px;font-size:.78rem;">
+          <option value="pending" ${(t.approval||'pending')==='pending'?'selected':''}>Pending</option>
+          <option value="approved" ${t.approval==='approved'?'selected':''}>Approved</option>
+        </select>` : `<select class="status-select" data-id="${t.id}" style="margin-top:0;">
+          ${STATUSES.map(s=>`<option value="${s}" ${t.status===s?'selected':''}>${label(s)}</option>`).join('')}
+        </select>`}
+        <button class="btn-ghost add-note-btn" data-id="${t.id}" style="padding:7px 12px;font-size:.78rem;">＋ Add note</button>
+      </div>
+      <div class="note-form" data-id="${t.id}" hidden></div>`}
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.status-select').forEach(sel => {
+    sel.onchange = async () => {
+      sel.disabled = true;
+      try { await db.doc('tickets/' + sel.dataset.id).update({status: sel.value, resolvedAt: sel.value === 'resolved' ? Date.now() : null}); }
+      finally { renderTicketsTab(); }
+    };
+  });
+  list.querySelectorAll('.approval-select').forEach(sel => sel.onchange = async () => {
+    sel.disabled = true;
+    try { await db.doc('tickets/' + sel.dataset.id).update({approval: sel.value, approvedAt: sel.value === 'approved' ? Date.now() : null}); }
+    finally { renderTicketsTab(); }
+  });
+  list.querySelectorAll('.add-note-btn').forEach(btn => btn.onclick = () => {
+    if (!isAdmin()) return;
+    const id = btn.dataset.id, box = list.querySelector(`.note-form[data-id="${id}"]`);
+    if (!box.hidden) { box.hidden = true; box.innerHTML = ''; return; }   // click again to close
+    box.hidden = false;
+    box.innerHTML = `<textarea class="note-text" rows="3" placeholder="Write a note…" style="margin-top:10px;"></textarea>
+      <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap;">
+        <button class="btn-primary note-save" style="width:auto;margin:0;padding:9px 16px;font-size:.85rem;">Save note</button>
+        <button class="btn-ghost note-cancel" style="padding:9px 14px;font-size:.85rem;">Cancel</button>
+        <span class="ticket-meta note-msg" style="margin:0;"></span></div>`;
+    const ta = box.querySelector('.note-text'), msg = box.querySelector('.note-msg'), save = box.querySelector('.note-save');
+    ta.focus();
+    box.querySelector('.note-cancel').onclick = () => { box.hidden = true; box.innerHTML = ''; };
+    const doSave = async () => {
+      const text = ta.value.trim();
+      if (!text) { msg.style.color = 'var(--danger)'; msg.textContent = 'Write a note first.'; return; }
+      const t = tickets.find(x => x.id === id);
+      save.disabled = true; save.textContent = 'Saving…';
+      try {
+        await db.doc('tickets/' + id).update({notes: [...ticketNotes(t), {text, at: Date.now(), by: (SESSION && SESSION.name) || 'Admin'}]});
+        renderTicketsTab();
+      } catch(e){ save.disabled = false; save.textContent = 'Save note'; msg.style.color = 'var(--danger)'; msg.textContent = "Couldn't save — check your connection."; }
+    };
+    save.onclick = doSave;
+    ta.onkeydown = e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) doSave(); };
+  });
+}
+
+function toCsvValue(v){
+  const s = v == null ? '' : String(v);
+  return '"' + s.replace(/"/g,'""') + '"';
+}
+async function exportCsv(name, cols, rows){
+  const lines = [cols.join(',')];
+  rows.forEach(r => {
+    lines.push(cols.map(c => {
+      let v = r[c];
+      if (c === 'createdAt' || c === 'dueBy') v = v ? new Date(v).toISOString() : '';
+      return toCsvValue(v);
+    }).join(','));
+  });
+  const csv = lines.join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name + '.csv';
+  a.click();
+}
+
+function monthKey(ts){
+  const d = new Date(ts);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function monthLabel(key){
+  const [y,m] = key.split('-');
+  return new Date(y, m-1, 1).toLocaleString('default',{month:'long', year:'numeric'});
+}
+
+let reportRange = '30';
+function bars(obj){
+  const keys = Object.keys(obj).sort((a,b) => obj[b]-obj[a]);
+  const max = Math.max(1, ...keys.map(k => obj[k]));
+  return keys.map(k => `<div class="bar-row"><span>${escapeHtml(k)}</span><div class="bar"><i style="width:${obj[k]/max*100}%"></i></div><b>${obj[k]}</b></div>`).join('') || '<div class="ticket-meta">No data</div>';
+}
+function fmtDuration(ms){
+  const h = ms/3600000;
+  return h < 1 ? Math.round(h*60) + 'm' : h < 48 ? h.toFixed(1) + 'h' : (h/24).toFixed(1) + 'd';
+}
+
+async function renderReportsTab(){
+  const body = document.getElementById('tabBody');
+  const all = await fetchAll('tickets');
+  const cutoff = reportRange === 'all' ? 0 : Date.now() - (+reportRange) * 86400000;
+  const inRange = all.filter(t => (t.createdAt||0) >= cutoff);
+  const tickets = inRange.filter(t => !isReq(t));
+  const reqs = inRange.filter(isReq);
+  const rangeSel = `<select id="rangeSel" style="width:auto;">
+      ${[['7','Last 7 days'],['30','Last 30 days'],['90','Last 90 days'],['365','Last year'],['all','All time']].map(o=>`<option value="${o[0]}" ${reportRange===o[0]?'selected':''}>${o[1]}</option>`).join('')}
+    </select>`;
+  const bind = () => {
+    document.getElementById('rangeSel').onchange = e => { reportRange = e.target.value; renderReportsTab(); };
+    const ex = document.getElementById('exportFullCsv');
+    if (ex) ex.onclick = () => exportCsv('tickets_report',
+      ['id','ticketType','locationName','assetName','reporterName','department','category','itemName','quantity','urgency','status','approval','note','description','createdAt','dueBy'], tickets.map(t => ({...t, note: notesText(t)})));
+    const pr = document.getElementById('printBtn'); if (pr) pr.onclick = () => window.print();
+  };
+  if (!tickets.length) { body.innerHTML = `<div class="row" style="margin-bottom:14px;">${rangeSel}</div><div class="empty">No tickets in this period.</div>`; bind(); return; }
+
+  const now = Date.now();
+  const st = {open:0, 'in-progress':0, resolved:0, overdue:0};
+  const byMonth = {}, byLoc = {}, byCat = {}, byUrg = {}, byDept = {};
+  const durs = [];
+  const blank = () => ({total:0, open:0, inprog:0, resolved:0});
+  const bump = (m, k, t) => { m[k] = m[k] || blank(); m[k].total++; if (t.status==='resolved') m[k].resolved++; else if (t.status==='in-progress') m[k].inprog++; else m[k].open++; };
+  tickets.forEach(t => {
+    st[t.status] = (st[t.status]||0) + 1;
+    if (t.status !== 'resolved' && t.dueBy && t.dueBy < now) st.overdue++;
+    if (t.status === 'resolved' && t.resolvedAt && t.createdAt) durs.push(t.resolvedAt - t.createdAt);
+    bump(byMonth, monthKey(t.createdAt || now), t);
+    bump(byLoc, t.locationName || t.locationId || 'Unknown', t);
+    byCat[t.category||'Other'] = (byCat[t.category||'Other']||0) + 1;
+    byUrg[t.urgency||'Medium'] = (byUrg[t.urgency||'Medium']||0) + 1;
+    if (t.department) byDept[t.department] = (byDept[t.department]||0) + 1;
+  });
+  const avg = durs.length ? fmtDuration(durs.reduce((a,b)=>a+b,0)/durs.length) : '—';
+  const rate = Math.round((st.resolved / tickets.length) * 100);
+  const th = 'text-align:left;padding:9px 8px;border-bottom:1.5px solid var(--border);color:var(--muted);font-size:.78rem;font-weight:700;';
+  const td = 'padding:9px 8px;border-bottom:1px solid var(--border);';
+  const tbl = (first, map, keys) => `<div style="overflow-x:auto;"><table style="font-size:.85rem;">
+    <thead><tr>${[first,'Total','Open','In Progress','Resolved'].map(h=>`<th style="${th}">${h}</th>`).join('')}</tr></thead>
+    <tbody>${keys.map(k => { const r = map[k]; return `<tr><td style="${td}">${escapeHtml(first==='Month'?monthLabel(k):k)}</td><td style="${td}">${r.total}</td><td style="${td}">${r.open}</td><td style="${td}">${r.inprog}</td><td style="${td}">${r.resolved}</td></tr>`; }).join('')}</tbody></table></div>`;
+
+  body.innerHTML = `
+    <div class="row" style="margin-bottom:14px;flex-wrap:wrap;gap:8px;">${rangeSel}
+      <button class="btn-ghost" id="printBtn" style="margin-left:auto;">Print</button>
+      <button class="btn-ghost" id="exportFullCsv">Export CSV</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>${tickets.length}</b><span>Total tickets</span></div>
+      <div class="stat"><b style="color:var(--danger)">${st.open||0}</b><span>Open</span></div>
+      <div class="stat"><b style="color:var(--warn)">${st['in-progress']||0}</b><span>In progress</span></div>
+      <div class="stat"><b style="color:var(--ok)">${st.resolved||0}</b><span>Resolved (${rate}%)</span></div>
+      <div class="stat"><b style="color:var(--danger)">${st.overdue}</b><span>Overdue</span></div>
+      <div class="stat"><b>${avg}</b><span>Avg. resolution</span></div>
+      <div class="stat"><b style="color:var(--warn)">${reqs.filter(r => (r.approval||'pending') === 'pending').length}</b><span>Requests pending</span></div>
+      <div class="stat"><b style="color:var(--ok)">${reqs.filter(r => r.approval === 'approved').length}</b><span>Requests approved</span></div>
+    </div>
+    <div class="two">
+      <div class="card"><h2 class="ct">By category</h2>${bars(byCat)}</div>
+      <div class="card"><h2 class="ct">By urgency</h2>${bars(byUrg)}</div>
+    </div>
+    ${Object.keys(byDept).length ? `<div class="card"><h2 class="ct">Top departments</h2>${bars(byDept)}</div>` : ''}
+    <div class="card"><h2 class="ct">Monthly report</h2>${tbl('Month', byMonth, Object.keys(byMonth).sort().reverse())}</div>
+    <div class="card"><h2 class="ct">Location report</h2>${tbl('Location', byLoc, Object.keys(byLoc).sort())}</div>
+  `;
+  bind();
+}
+
+// ---------- SETTINGS TAB ----------
+function openUserEditor(user, locations, done){
+  const bg = document.createElement('div'); bg.className = 'qr-modal-bg';
+  const $ = id => bg.querySelector('#' + id);
+  const editing = !!user;
+  const u = user || {name:'', username:'', locationIds:[]};
+  bg.innerHTML = `<div class="qr-modal edit-modal">
+    <h1 style="font-size:1.1rem;margin:0 0 4px;">${editing ? 'Edit user' : 'Add location user'}</h1>
+    <label>Display name</label><input id="u_name" type="text" value="${escapeHtml(u.name||'')}" placeholder="e.g. Nadeesha Perera">
+    <label>Username</label><input id="u_user" type="text" value="${escapeHtml(u.username||'')}" ${editing ? 'readonly' : ''} autocomplete="off" placeholder="e.g. nadeesha">
+    <label>${editing ? 'New password (leave empty to keep)' : 'Password'}</label><input id="u_pw" type="password" autocomplete="new-password">
+    <label>Locations this user can access</label>
+    <div class="chips">${locations.length ? locations.map(l => `<label><input type="checkbox" class="u_loc" value="${l.id}" ${(u.locationIds||[]).includes(l.id)?'checked':''}>${escapeHtml(l.name)}</label>`).join('') : '<span class="ticket-meta">Add locations first.</span>'}</div>
+    <button class="btn-primary" id="u_save">${editing ? 'Save changes' : 'Create user'}</button>
+    <button class="btn-ghost" id="u_cancel" style="width:100%;margin-top:8px;">Cancel</button>
+    <div id="u_msg" class="ticket-meta" style="margin-top:10px;"></div>
+  </div>`;
+  document.body.appendChild(bg);
+  $('u_cancel').onclick = () => bg.remove();
+  $('u_save').onclick = async () => {
+    const msg = $('u_msg'); const err = t => { msg.style.color = 'var(--danger)'; msg.textContent = t; };
+    const name = $('u_name').value.trim(), username = $('u_user').value.trim(), pw = $('u_pw').value;
+    const locationIds = [...bg.querySelectorAll('.u_loc:checked')].map(c => c.value);
+    if (username.length < 3) return err('Username must be at least 3 characters.');
+    if (!editing && pw.length < 6) return err('Password must be at least 6 characters.');
+    if (editing && pw && pw.length < 6) return err('Password must be at least 6 characters.');
+    if (!locationIds.length) return err('Select at least one location.');
+    const btn = $('u_save'); btn.disabled = true;
+    try {
+      const [all, ar] = await Promise.all([fetchAll('users'), db.doc('settings/auth').get()]);
+      const lower = username.toLowerCase();
+      if (all.some(x => x.id !== u.id && (x.username || '').toLowerCase() === lower) || (ar && ar.data && (ar.data.user || '').toLowerCase() === lower)) { btn.disabled = false; return err('That username is already taken.'); }
+      const id = editing ? u.id : 'user_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+      const data = {id, name: name || username, username, locationIds, locationNames: locationIds.map(i => (locations.find(l => l.id === i) || {}).name || i),
+        createdAt: editing ? (u.createdAt || Date.now()) : Date.now()};
+      if (!editing || pw) { data.salt = newSalt(); data.hash = await hashPw(username, pw, data.salt); }
+      await db.doc('users/' + id).set(data);
+      bg.remove(); done();
+    } catch(e){ btn.disabled = false; err(e.message || "Couldn't save — check Firestore rules (users)."); }
+  };
+}
+
+async function renderSettingsTab(){
+  const body = document.getElementById('tabBody');
+  const locations = await fetchAll('locations');
+  locations.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  body.innerHTML = `
+    <div class="card">
+      <h2 class="ct">General</h2>
+      <label>Organisation / team name</label>
+      <input id="s_org" type="text" value="${escapeHtml(SETTINGS.orgName)}">
+      <label>Currency label for expenses</label>
+      <input id="s_cur" type="text" maxlength="6" value="${escapeHtml(SETTINGS.currency)}" placeholder="e.g. LKR, USD">
+      <button class="btn-primary" id="saveSettings">Save</button>
+      <div id="setMsg" class="ticket-meta" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <h2 class="ct">Locations</h2>
+      <div class="add-row" style="margin-top:0;">
+        <input id="s_newLoc" type="text" placeholder="e.g. Colombo Store">
+        <button class="btn-primary" style="width:auto;margin-top:0;" id="s_addLoc">Add</button>
+      </div>
+      <div id="s_locMsg" class="ticket-meta" style="margin-top:8px;"></div>
+      <div id="s_locList" style="margin-top:6px;"></div>
+    </div>
+    <div class="card">
+      <h2 class="ct">Asset types</h2>
+      <div class="add-row" style="margin-top:0;">
+        <input id="s_newType" type="text" placeholder="e.g. Scanner, CCTV camera">
+        <button class="btn-primary" style="width:auto;margin-top:0;" id="s_addType">Add</button>
+      </div>
+      <div id="s_typeMsg" class="ticket-meta" style="margin-top:8px;"></div>
+      <div id="s_typeList" style="margin-top:6px;"></div>
+    </div>
+    <div class="card">
+      <h2 class="ct">Location users</h2>
+      <div class="ticket-meta">Location users sign in to this dashboard and only see tickets and assets for their locations. They can add and edit assets at their locations, but they can't open Settings, Work Log or Locations &amp; QR.</div>
+      <button class="btn-primary" id="u_add" style="width:auto;margin-top:12px;">＋ Add user</button>
+      <div id="u_list" style="margin-top:8px;"></div>
+    </div>
+    <div class="card">
+      <h2 class="ct">Admin login</h2>
+      <div class="ticket-meta">Change the username or password for Work Log and Settings. Leave the new password empty to keep the current one.</div>
+      <label>Current password</label><input id="c_cur" type="password" autocomplete="current-password">
+      <label>Username</label><input id="c_user" type="text" autocomplete="username">
+      <label>New password</label><input id="c_new" type="password" autocomplete="new-password">
+      <button class="btn-primary" id="c_go">Update login</button>
+      <div id="c_msg" class="ticket-meta" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <h2 class="ct">Appearance <span class="ticket-meta" style="font-weight:400;">(saved on this device)</span></h2>
+      <label>Theme</label>
+      <select id="s_theme">${[['light','Light'],['dark','Dark'],['auto','Match system']].map(o=>`<option value="${o[0]}" ${SETTINGS.theme===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select>
+      <label>Accent colour</label>
+      <div class="swatches">${ACCENTS.map(c => `<button class="sw ${SETTINGS.accent===c?'on':''}" data-c="${c}" style="background:${c};" aria-label="${c}"></button>`).join('')}</div>
+    </div>
+    <div class="card">
+      <h2 class="ct">Links</h2>
+      <label>Public report form</label>
+      <div class="copy-row"><input readonly value="${escapeHtml(formUrl())}"><button class="btn-ghost copy-btn" data-v="${escapeHtml(formUrl())}">Copy</button></div>
+      <label>Admin dashboard</label>
+      <div class="copy-row"><input readonly value="${escapeHtml(adminUrl())}"><button class="btn-ghost copy-btn" data-v="${escapeHtml(adminUrl())}">Copy</button></div>
+      <button class="btn-ghost" id="setQr">Show form QR code</button>
+    </div>
+    <div class="card">
+      <h2 class="ct">Data export</h2>
+      <div class="row" style="flex-wrap:wrap;gap:8px;">
+        <button class="btn-ghost" data-x="tickets">Tickets CSV</button>
+        <button class="btn-ghost" data-x="assets">Assets CSV</button>
+        <button class="btn-ghost" data-x="locations">Locations CSV</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2 class="ct">Clear asset data</h2>
+      <div class="ticket-meta" style="margin:0 0 12px;line-height:1.5;">Permanently deletes every asset record, including its history, accessories, DVRs and cameras (each of which is a separate asset). Tickets, locations and settings are not touched. Download the Excel report first if you want a copy.</div>
+      <div class="row" style="flex-wrap:wrap;gap:8px;">
+        <button class="btn-ghost" id="clrBackup">⬇ Excel report (backup)</button>
+        <button class="btn-ghost" id="clrAssets" style="color:var(--danger);">Delete all assets…</button>
+      </div>
+      <div id="clrMsg" class="ticket-meta" style="margin-top:10px;"></div>
+    </div>
+  `;
+  document.getElementById('clrBackup').onclick = async e => { const b = e.currentTarget; b.disabled = true; try { { const al = await fetchAll('assets'); await exportAssetsXlsx(al, al); } } finally { b.disabled = false; } };
+  document.getElementById('clrAssets').onclick = async e => {
+    const b = e.currentTarget, msg = document.getElementById('clrMsg');
+    const all = (await fetchAll('assets')).filter(a => a.id);
+    if (!all.length) { msg.style.color = 'var(--muted)'; msg.textContent = 'There are no assets to delete.'; return; }
+    if (!confirm('Delete ALL ' + all.length + ' assets? This cannot be undone.')) return;
+    if (prompt('Type DELETE to permanently remove all ' + all.length + ' assets.') !== 'DELETE') { msg.style.color = 'var(--muted)'; msg.textContent = 'Cancelled — nothing was deleted.'; return; }
+    b.disabled = true; let done = 0, failed = 0;
+    for (let i = 0; i < all.length; i += 10) {
+      const res = await Promise.allSettled(all.slice(i, i + 10).map(a => db.doc('assets/' + a.id).delete()));
+      res.forEach(r => r.status === 'fulfilled' ? done++ : failed++);
+      msg.style.color = 'var(--muted)'; msg.textContent = 'Deleting… ' + done + ' of ' + all.length;
+    }
+    b.disabled = false; msg.style.color = failed ? 'var(--danger)' : 'var(--ok)';
+    msg.textContent = failed ? done + " deleted, " + failed + " couldn't be deleted — check that your Firestore rules allow deletes." : 'All ' + done + ' assets deleted.';
+  };
+  document.getElementById('saveSettings').onclick = async () => {
+    const msg = document.getElementById('setMsg');
+    const orgName = document.getElementById('s_org').value.trim() || 'IT Desk';
+    try {
+      const currency = document.getElementById('s_cur').value.trim();
+      await db.doc('settings/general').set({orgName, currency});
+      SETTINGS.orgName = orgName; SETTINGS.currency = currency;
+      msg.style.color = 'var(--ok)'; msg.textContent = 'Settings saved.';
+      document.querySelector('.bt').textContent = orgName;
+    } catch(e){ msg.style.color = 'var(--danger)'; msg.textContent = "Couldn't save — check your connection and Firestore rules."; }
+  };
+  const drawLocs = () => {
+    const list = document.getElementById('s_locList');
+    list.innerHTML = locations.length
+      ? locations.map(l => `<div class="loc-item"><div class="loc-name">${escapeHtml(l.name)}</div><button class="btn-ghost del-loc" data-id="${l.id}" style="color:var(--danger);padding:7px 12px;font-size:.8rem;">Delete</button></div>`).join('')
+      : '<div class="ticket-meta">No locations yet.</div>';
+    list.querySelectorAll('.del-loc').forEach(b => b.onclick = async () => {
+      const l = locations.find(x => x.id === b.dataset.id), msg = document.getElementById('s_locMsg');
+      b.disabled = true;
+      const [as, ts] = await Promise.all([fetchAll('assets'), fetchAll('tickets')]);
+      const na = as.filter(x => x.locationId === l.id).length, nt = ts.filter(x => x.locationId === l.id).length;
+      let q = 'Delete "' + l.name + '"?';
+      if (na || nt) q += '\n\n' + na + ' asset(s) and ' + nt + ' ticket(s) use this location. They keep the old name, but it will no longer be selectable.';
+      if (!confirm(q)) { b.disabled = false; return; }
+      try {
+        await db.doc('locations/' + l.id).delete();
+        locations.splice(locations.indexOf(l), 1);
+        msg.style.color = 'var(--ok)'; msg.textContent = 'Deleted "' + l.name + '".'; drawLocs();
+      } catch(e){ b.disabled = false; msg.style.color = 'var(--danger)'; msg.textContent = "Couldn't delete — check your Firestore rules allow deletes."; }
+    });
+  };
+  drawLocs();
+  const addLoc = async () => {
+    const inp = document.getElementById('s_newLoc'), msg = document.getElementById('s_locMsg');
+    const name = inp.value.trim();
+    if (!name) return;
+    if (locations.some(l => (l.name||'').toLowerCase() === name.toLowerCase())) { msg.style.color = 'var(--danger)'; msg.textContent = 'That location already exists.'; return; }
+    const id = 'loc_' + Date.now().toString(36);
+    try {
+      await db.doc('locations/' + id).set({id, name, createdAt: Date.now()});
+      locations.push({id, name}); locations.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+      inp.value = ''; msg.style.color = 'var(--ok)'; msg.textContent = 'Added “' + name + '”.'; drawLocs();
+    } catch(e){ msg.style.color = 'var(--danger)'; msg.textContent = "Couldn't add — check your connection and Firestore rules."; }
+  };
+  document.getElementById('s_addLoc').onclick = addLoc;
+  document.getElementById('s_newLoc').onkeydown = e => { if (e.key === 'Enter') addLoc(); };
+  const saveTypes = () => db.doc('settings/general').set({assetTypes: ASSET_TYPES.slice()});
+  const drawTypes = () => {
+    const list = document.getElementById('s_typeList'), msg = document.getElementById('s_typeMsg');
+    list.innerHTML = ASSET_TYPES.map(t => `<div class="loc-item"><div class="loc-name">${escapeHtml(t)}</div><button class="btn-ghost del-type" data-t="${escapeHtml(t)}" style="color:var(--danger);padding:7px 12px;font-size:.8rem;">Delete</button></div>`).join('');
+    list.querySelectorAll('.del-type').forEach(b => b.onclick = async () => {
+      const t = b.dataset.t;
+      if (ASSET_TYPES.length <= 1) { msg.style.color = 'var(--danger)'; msg.textContent = 'Keep at least one asset type.'; return; }
+      const n = (await fetchAll('assets')).filter(x => x.type === t).length;
+      if (!confirm('Delete type "' + t + '"?' + (n ? '\n\n' + n + ' asset(s) use it and will keep this type name.' : ''))) return;
+      const prev = ASSET_TYPES.slice();
+      ASSET_TYPES.splice(ASSET_TYPES.indexOf(t), 1);
+      try { await saveTypes(); msg.style.color = 'var(--ok)'; msg.textContent = 'Deleted "' + t + '".'; }
+      catch(e){ ASSET_TYPES.length = 0; ASSET_TYPES.push(...prev); msg.style.color = 'var(--danger)'; msg.textContent = "Couldn't delete — check your connection and Firestore rules."; }
+      drawTypes();
+    });
+  };
+  drawTypes();
+  const addType = async () => {
+    const inp = document.getElementById('s_newType'), msg = document.getElementById('s_typeMsg');
+    const t = inp.value.trim();
+    if (!t) return;
+    if (ASSET_TYPES.some(x => x.toLowerCase() === t.toLowerCase())) { msg.style.color = 'var(--danger)'; msg.textContent = 'That type already exists.'; return; }
+    ASSET_TYPES.push(t);
+    try { await saveTypes(); inp.value = ''; msg.style.color = 'var(--ok)'; msg.textContent = 'Added "' + t + '".'; }
+    catch(e){ ASSET_TYPES.pop(); msg.style.color = 'var(--danger)'; msg.textContent = "Couldn't add — check your connection and Firestore rules."; }
+    drawTypes();
+  };
+  document.getElementById('s_addType').onclick = addType;
+  document.getElementById('s_newType').onkeydown = e => { if (e.key === 'Enter') addType(); };
+  const drawUsers = async () => {
+    const list = document.getElementById('u_list');
+    const users = await fetchAll('users');
+    users.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+    list.innerHTML = users.length ? users.map(u => `<div class="loc-item"><div><div class="loc-name">${escapeHtml(u.name||u.username)} <span class="ticket-meta">@${escapeHtml(u.username)}</span></div><div class="loc-count">${escapeHtml((u.locationNames||[]).join(', ') || 'No locations')}</div></div>
+      <div class="row" style="gap:6px;"><button class="btn-ghost u-edit" data-id="${u.id}" style="padding:7px 12px;font-size:.8rem;">Edit</button><button class="btn-ghost u-del" data-id="${u.id}" style="color:var(--danger);padding:7px 12px;font-size:.8rem;">Delete</button></div></div>`).join('')
+      : '<div class="ticket-meta">No users yet.</div>';
+    list.querySelectorAll('.u-edit').forEach(b => b.onclick = () => openUserEditor(users.find(x => x.id === b.dataset.id), locations, drawUsers));
+    list.querySelectorAll('.u-del').forEach(b => b.onclick = async () => {
+      const u = users.find(x => x.id === b.dataset.id);
+      if (!confirm('Delete user "' + (u.name || u.username) + '"? They will no longer be able to sign in.')) return;
+      try { await db.doc('users/' + u.id).delete(); } catch(e){ alert("Couldn't delete — check Firestore rules (users)."); }
+      drawUsers();
+    });
+  };
+  document.getElementById('u_add').onclick = () => openUserEditor(null, locations, drawUsers);
+  drawUsers();
+  (async () => { try { const r = await db.doc('settings/auth').get(); if (r && r.data) document.getElementById('c_user').value = r.data.user || ''; } catch(e){} })();
+  document.getElementById('c_go').onclick = async () => {
+    const msg = document.getElementById('c_msg');
+    const err = t => { msg.style.color = 'var(--danger)'; msg.textContent = t; };
+    try {
+      const r = await db.doc('settings/auth').get(), c = r && r.data;
+      const cur = document.getElementById('c_cur').value;
+      if (c && (await hashPw(c.user, cur, c.salt)) !== c.hash) return err('Current password is incorrect.');
+      const user = document.getElementById('c_user').value.trim();
+      const pw = document.getElementById('c_new').value || cur;
+      if (user.length < 3) return err('Username must be at least 3 characters.');
+      if (pw.length < 6) return err('Password must be at least 6 characters.');
+      const salt = newSalt();
+      await db.doc('settings/auth').set({user, salt, hash: await hashPw(user, pw, salt)});
+      ['c_cur','c_new'].forEach(i => document.getElementById(i).value = '');
+      msg.style.color = 'var(--ok)'; msg.textContent = 'Login updated.';
+    } catch(e){ err(e.message || "Couldn't update — check your connection."); }
+  };
+  document.getElementById('s_theme').onchange = e => { SETTINGS.theme = e.target.value; lsSet('it_theme', SETTINGS.theme); applyAppearance(); };
+  body.querySelectorAll('.sw').forEach(b => b.onclick = () => {
+    SETTINGS.accent = b.dataset.c; lsSet('it_accent', SETTINGS.accent); applyAppearance();
+    body.querySelectorAll('.sw').forEach(x => x.classList.toggle('on', x === b));
+  });
+  body.querySelectorAll('.copy-btn').forEach(b => b.onclick = () => navigator.clipboard.writeText(b.dataset.v).then(() => { b.textContent = 'Copied!'; }));
+  document.getElementById('setQr').onclick = () => showQr();
+  const cols = {
+    tickets:['id','ticketType','locationName','assetName','reporterName','department','category','itemName','quantity','urgency','status','approval','note','description','createdAt','dueBy'],
+    assets:['id','name','type','locationName','serial','status','createdAt'],
+    locations:['id','name','createdAt']
+  };
+  body.querySelectorAll('[data-x]').forEach(b => b.onclick = async () => exportCsv(b.dataset.x, cols[b.dataset.x], await fetchAll(b.dataset.x)));
+}
+
+// ---------- WORK LOG ----------
+let workEditId = null, workMonth = 'all', workLoc = 'all';
+const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+const dayName = ds => ds ? new Date(ds + 'T00:00:00').toLocaleDateString('en-US', {weekday:'long'}) : '';
+const money = n => (SETTINGS.currency ? SETTINGS.currency + ' ' : '') + (+n || 0).toLocaleString(undefined, {maximumFractionDigits:2});
+const sumExp = l => (l.expenses || []).reduce((t,e) => t + (+e.amount || 0), 0);
+
+async function renderWorkTab(){
+  const body = document.getElementById('tabBody');
+  const [logs, locations] = await Promise.all([fetchAll('worklogs'), fetchAll('locations')]);
+  locations.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  const editing = workEditId ? logs.find(l => l.id === workEditId) : null;
+  if (workEditId && !editing) workEditId = null;
+  const cur = editing || {date: todayStr(), work:'', note:'', locationIds:[], expenses:[]};
+  const expRow = (e = {}) => `<div class="exp-row"><input class="x_desc" type="text" placeholder="Expense (e.g. Transport)" value="${escapeHtml(e.desc||'')}"><input class="x_amt" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Amount" value="${e.amount||''}"><button class="btn-ghost x_del" title="Remove">✕</button></div>`;
+
+  body.innerHTML = `
+    <div class="card">
+      <h2 class="ct">${editing ? 'Edit work entry' : 'Add work entry'}</h2>
+      <div class="two" style="gap:12px;">
+        <div><label>Date</label><input id="w_date" type="date" value="${escapeHtml(cur.date)}"></div>
+        <div><label>Day</label><input id="w_day" type="text" readonly value="${dayName(cur.date)}"></div>
+      </div>
+      <label>Work done</label>
+      <textarea id="w_work" placeholder="What did you work on?">${escapeHtml(cur.work)}</textarea>
+      <label>Locations (select one or more)</label>
+      <div class="chips">${locations.length ? locations.map(l => `<label><input type="checkbox" class="w_loc" value="${l.id}" ${(cur.locationIds||[]).includes(l.id)?'checked':''}>${escapeHtml(l.name)}</label>`).join('') : '<span class="ticket-meta">Add locations in Settings first.</span>'}</div>
+      <label>Note</label>
+      <textarea id="w_note" style="min-height:64px;" placeholder="Anything to remember about this work">${escapeHtml(cur.note||'')}</textarea>
+      <label>Expenses (optional)</label>
+      <div id="w_exps">${(cur.expenses||[]).map(expRow).join('')}</div>
+      <div class="row" style="justify-content:space-between;margin-top:4px;">
+        <button class="btn-ghost" id="w_addExp">＋ Add expense</button><b id="w_total"></b>
+      </div>
+      <button class="btn-primary" id="w_save">${editing ? 'Update entry' : 'Save entry'}</button>
+      ${editing ? '<button class="btn-ghost" id="w_cancel" style="width:100%;margin-top:8px;">Cancel</button>' : ''}
+      <div id="w_msg" class="ticket-meta" style="margin-top:10px;"></div>
+    </div>
+    <div id="workList"></div>`;
+
+  const exps = document.getElementById('w_exps');
+  const total = () => { let t = 0; exps.querySelectorAll('.x_amt').forEach(i => t += +i.value || 0); document.getElementById('w_total').textContent = t ? 'Total: ' + money(t) : ''; };
+  total();
+  exps.oninput = total;
+  exps.onclick = e => { const b = e.target.closest('.x_del'); if (b) { b.parentElement.remove(); total(); } };
+  document.getElementById('w_addExp').onclick = () => { exps.insertAdjacentHTML('beforeend', expRow()); exps.lastElementChild.querySelector('input').focus(); };
+  document.getElementById('w_date').onchange = e => { document.getElementById('w_day').value = dayName(e.target.value); };
+  if (editing) document.getElementById('w_cancel').onclick = () => { workEditId = null; renderWorkTab(); };
+
+  document.getElementById('w_save').onclick = async () => {
+    const msg = document.getElementById('w_msg');
+    const date = document.getElementById('w_date').value;
+    const work = document.getElementById('w_work').value.trim();
+    if (!date || !work) { msg.style.color = 'var(--danger)'; msg.textContent = 'Date and work done are required.'; return; }
+    const locationIds = [...body.querySelectorAll('.w_loc:checked')].map(c => c.value);
+    const locationNames = locationIds.map(i => (locations.find(l => l.id === i) || {}).name || i);
+    const expenses = [...exps.querySelectorAll('.exp-row')].map(r => ({desc: r.querySelector('.x_desc').value.trim(), amount: +r.querySelector('.x_amt').value || 0})).filter(e => e.desc || e.amount);
+    const id = editing ? editing.id : 'w_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+    const btn = document.getElementById('w_save'); btn.disabled = true;
+    try {
+      await db.doc('worklogs/' + id).set({id, date, day: dayName(date), work, note: document.getElementById('w_note').value.trim(),
+        locationIds, locationNames, expenses, total: expenses.reduce((t,e) => t + e.amount, 0), createdAt: editing ? (editing.createdAt || Date.now()) : Date.now()});
+      workEditId = null; await renderWorkTab();
+    } catch(e){ btn.disabled = false; msg.style.color = 'var(--danger)'; msg.textContent = "Couldn't save — check your connection and Firestore rules (worklogs)."; }
+  };
+
+  // ----- list -----
+  const months = [...new Set(logs.map(l => (l.date||'').slice(0,7)).filter(Boolean))].sort().reverse();
+  let rows = logs.filter(l => l.date);
+  if (workMonth !== 'all') rows = rows.filter(l => l.date.slice(0,7) === workMonth);
+  if (workLoc !== 'all') rows = rows.filter(l => (l.locationIds||[]).includes(workLoc));
+  rows.sort((a,b) => b.date.localeCompare(a.date) || (b.createdAt||0) - (a.createdAt||0));
+  const days = [...new Set(rows.map(l => l.date))];
+  const grand = rows.reduce((t,l) => t + sumExp(l), 0);
+  const list = document.getElementById('workList');
+  list.innerHTML = `
+    <div class="stats" style="margin-top:6px;">
+      <div class="stat"><b>${rows.length}</b><span>Entries</span></div>
+      <div class="stat"><b>${days.length}</b><span>Days worked</span></div>
+      <div class="stat"><b>${money(grand)}</b><span>Total expenses</span></div>
+    </div>
+    <div class="row" style="flex-wrap:wrap;gap:8px;">
+      <select id="wMonth" style="width:auto;"><option value="all">All months</option>${months.map(m => `<option value="${m}" ${workMonth===m?'selected':''}>${monthLabel(m)}</option>`).join('')}</select>
+      <select id="wLoc" style="width:auto;"><option value="all">All locations</option>${locations.map(l => `<option value="${l.id}" ${workLoc===l.id?'selected':''}>${escapeHtml(l.name)}</option>`).join('')}</select>
+      <button class="btn-ghost" id="wExport" style="margin-left:auto;">Export CSV</button>
+    </div>
+    ${rows.length ? days.map(d => {
+      const dayRows = rows.filter(l => l.date === d);
+      const dt = dayRows.reduce((t,l) => t + sumExp(l), 0);
+      return `<div class="day-h"><div>${new Date(d + 'T00:00:00').toLocaleDateString(undefined, {weekday:'long', year:'numeric', month:'short', day:'numeric'})}</div><span>${dt ? 'Expenses ' + money(dt) : ''}</span></div>` +
+        dayRows.map(l => `
+        <div class="ticket">
+          <div class="ticket-desc" style="margin-top:0;font-weight:600;white-space:pre-wrap;">${escapeHtml(l.work)}</div>
+          ${(l.locationNames||[]).length ? `<div style="margin-top:9px;">${l.locationNames.map(n => `<span class="badge" style="background:var(--accent-soft);color:var(--accent-ink);margin:0 5px 5px 0;">${escapeHtml(n)}</span>`).join('')}</div>` : ''}
+          ${l.note ? `<div class="ticket-meta" style="white-space:pre-wrap;">📝 ${escapeHtml(l.note)}</div>` : ''}
+          ${sumExp(l) ? `<div class="row" style="margin-top:10px;justify-content:space-between;font-weight:700;"><span>Total expenses</span><span>${money(sumExp(l))}</span></div>` : ''}
+          <div class="row" style="margin-top:12px;gap:8px;">
+            <button class="btn-ghost w-edit" data-id="${l.id}" style="padding:7px 14px;font-size:.8rem;">Edit</button>
+            <button class="btn-ghost w-del" data-id="${l.id}" style="padding:7px 14px;font-size:.8rem;color:var(--danger);">Delete</button>
+          </div>
+        </div>`).join('');
+    }).join('') : '<div class="empty" style="margin-top:14px;">No work entries yet.</div>'}`;
+  document.getElementById('wMonth').onchange = e => { workMonth = e.target.value; renderWorkTab(); };
+  document.getElementById('wLoc').onchange = e => { workLoc = e.target.value; renderWorkTab(); };
+  document.getElementById('wExport').onclick = () => exportCsv('work_log', ['date','day','work','locations','note','expenses','total'],
+    rows.map(l => ({date:l.date, day:l.day||dayName(l.date), work:l.work, locations:(l.locationNames||[]).join('; '), note:l.note||'',
+      expenses:(l.expenses||[]).map(e => e.desc + ': ' + e.amount).join('; '), total:sumExp(l)})));
+  list.querySelectorAll('.w-edit').forEach(b => b.onclick = () => { workEditId = b.dataset.id; renderWorkTab().then(() => window.scrollTo(0,0)); });
+  list.querySelectorAll('.w-del').forEach(b => b.onclick = async () => {
+    if (!confirm('Delete this work entry?')) return;
+    try { await db.doc('worklogs/' + b.dataset.id).delete(); } catch(e){ alert("Couldn't delete — check Firestore rules."); }
+    renderWorkTab();
+  });
+}
+
+// ---------- ASSETS TAB ----------
+const ASSET_TYPES = ["Laptop","Desktop","Monitor","Printer","Router/Switch","POS Terminal","CCTV","Phone/Tablet","Other"];
+const ASSET_STATUSES = ["Active","In Repair","Retired"];
+
+
+// ---------- ASSET COMPONENTS: every accessory / sub-item / DVR / camera is its own asset record (own QR, history, status) ----------
+const FLOORS = ['Basement','Ground floor','1st floor','2nd floor','3rd floor','4th floor','Mezzanine','Roof','Outside / Car park'];
+const KIND_PARTS = {desktop:['Keyboard','Monitor','Mouse'], pos:['Scanner','POS printer','Cash drawer','Deactivator','POS power supply','Printer power supply']};
+const POS_COUNTED = ['Scanner','POS printer','Cash drawer','Deactivator'];
+const roleIs = (p, r) => { const x = String(p.role || '').toLowerCase(); return x === r.toLowerCase() || (r === 'POS printer' && x === 'printer'); };
+function assetKind(t){ t = String(t || '').toLowerCase(); if (/cctv|dvr/.test(t)) return 'cctv'; if (/\bpos\b/.test(t)) return 'pos'; if (/desktop|\bpc\b/.test(t)) return 'desktop'; return ''; }
+const isChildAsset = (a, all) => !!(a.parentId && all.some(x => x.id === a.parentId));
+const byOrder = (x, y) => (x.order || 0) - (y.order || 0);
+// all descendants of an asset in display order: [{k, d}] (d = depth, 0 = direct child)
+function descendantsOf(all, id){
+  const by = {}; all.forEach(x => { if (x.parentId) (by[x.parentId] = by[x.parentId] || []).push(x); });
+  const out = [], walk = (pid, d) => (by[pid] || []).slice().sort(byOrder).forEach(k => { out.push({k, d}); walk(k.id, d + 1); });
+  walk(id, 0); return out;
+}
+const isAccessory = k => k.type !== 'DVR' && k.type !== 'Camera';
+function xPartRow(role, p, fixed, on){
+  p = p || {};
+  return `<div class="xrow part" data-id="${escapeHtml(p.id || '')}" data-role="${escapeHtml(role)}" data-fixed="${fixed ? 1 : 0}">
+    <label class="xchk"><input type="checkbox" class="p_on" ${on === false ? '' : 'checked'}>${fixed ? escapeHtml(role) : `<input class="p_role" type="text" placeholder="Accessory name (e.g. UPS)" value="${escapeHtml(role)}">`}</label>
+    <input class="p_model" type="text" placeholder="Brand / model" value="${escapeHtml(p.model || '')}">
+    <input class="p_serial" type="text" placeholder="Serial (optional)" value="${escapeHtml(p.serial || '')}">
+    ${fixed ? '' : '<button type="button" class="btn-ghost x_del" title="Remove">✕</button>'}</div>`;
+}
+function xUnitRow(u, i){
+  u = u || {};
+  return `<div class="xrow punit" data-id="${escapeHtml(u.id || '')}"><span class="ticket-meta" style="margin:0;">#${i + 1}</span>
+    <input class="p_model" type="text" placeholder="Brand / model" value="${escapeHtml(u.model || '')}">
+    <input class="p_serial" type="text" placeholder="Serial (optional)" value="${escapeHtml(u.serial || '')}"></div>`;
+}
+function xCountGroup(role, units){
+  return `<div class="pgroup" data-role="${escapeHtml(role)}"><div class="xrow"><b style="font-size:.88rem;">${escapeHtml(role)}</b>
+    <input class="pg_count" type="number" min="0" max="20" inputmode="numeric" placeholder="Count" value="${units.length}"></div>
+    <div class="punits">${units.map(xUnitRow).join('')}</div></div>`;
+}
+function xCamRow(c, i){
+  c = c || {};
+  return `<div class="xrow cam" data-id="${escapeHtml(c.id || '')}"><input class="c_name" type="text" placeholder="Camera name" value="${escapeHtml(c.name || 'Camera ' + (i + 1))}">
+    <input class="c_floor" type="text" list="floorList" placeholder="Floor" value="${escapeHtml(c.floor || '')}">
+    <input class="c_model" type="text" placeholder="Camera model (optional)" value="${escapeHtml(c.model || '')}"></div>`;
+}
+function xDvrBlock(d, i){
+  d = d || {}; const cams = d.cameras || [];
+  return `<div class="xdvr" data-id="${escapeHtml(d.id || '')}"><div class="xrow">
+      <input class="d_name" type="text" placeholder="DVR name" value="${escapeHtml(d.name || 'DVR ' + (i + 1))}">
+      <input class="d_model" type="text" placeholder="DVR brand / model" value="${escapeHtml(d.model || '')}">
+      <input class="d_serial" type="text" placeholder="DVR serial (optional)" value="${escapeHtml(d.serial || '')}">
+      <input class="d_count" type="number" min="0" max="64" inputmode="numeric" placeholder="No. of cameras" value="${cams.length || ''}">
+      <button type="button" class="btn-ghost x_deldvr" title="Remove DVR">✕</button></div>
+    <div class="xrow"><input class="d_allfloor" type="text" list="floorList" placeholder="Floor for all cameras of this DVR"><button type="button" class="btn-ghost x_applyfloor">Apply to all</button></div>
+    <div class="xcams">${cams.map(xCamRow).join('')}</div></div>`;
+}
+function extraHtml(kind, d){
+  d = d || {};
+  const fl = `<datalist id="floorList">${FLOORS.map(f => `<option value="${escapeHtml(f)}">`).join('')}</datalist>`;
+  const note = `<div class="ticket-meta" style="margin:0 0 4px;">Each item below is saved as its own asset with its own QR code.</div>`;
+  if (kind === 'desktop' || kind === 'pos') {
+    const parts = d.parts || null, isPos = kind === 'pos';
+    const counted = isPos ? POS_COUNTED : [], fixed = KIND_PARTS[kind].filter(r => !counted.includes(r));
+    const find = r => parts && parts.find(p => roleIs(p, r));
+    const custom = parts ? parts.filter(p => !KIND_PARTS[kind].some(r => roleIs(p, r))) : [];
+    let h = `<div class="xbox" data-kind="${kind}">${note}`;
+    const sp = d.specs || {};
+    h += `<div class="xh">${isPos ? 'POS computer details' : 'CPU details'}</div><div class="xrow">
+      <input class="s_cpu" type="text" placeholder="Processor type (e.g. Intel Core i5-12400)" value="${escapeHtml(sp.processor || '')}">
+      <input class="s_ram" type="text" placeholder="RAM (e.g. 8 GB DDR4)" value="${escapeHtml(sp.ram || '')}">
+      <input class="s_disk" type="text" placeholder="Hard disk (e.g. 512 GB SSD)" value="${escapeHtml(sp.storage || '')}"></div>`;
+    if (isPos) {
+      h += `<div class="xh">POS devices — enter how many of each (0 = none). Each unit is saved as its own asset with its own QR code.</div><div class="x_groups">`;
+      h += counted.map(r => xCountGroup(r, parts ? parts.filter(p => roleIs(p, r)) : [{}])).join('');
+      h += `</div>`;
+    }
+    h += `<div class="xh">${isPos ? 'Other POS sub-items (untick any that this POS does not have)' : 'Accessories (untick any that are not supplied)'}</div><div class="x_parts">`;
+    h += fixed.map(r => { const p = find(r); return xPartRow(r, p, true, parts ? !!p : true); }).join('');
+    h += custom.map(p => xPartRow(p.role, p, false, true)).join('');
+    return h + `</div><button type="button" class="btn-ghost x_addpart">＋ Add other ${isPos ? 'sub-item' : 'accessory'}</button></div>`;
+  }
+  if (kind === 'cctv') {
+    const dvrs = d.dvrs && d.dvrs.length ? d.dvrs : [{}];
+    return `<div class="xbox" data-kind="cctv">${fl}${note}<div class="xh">DVRs and cameras — enter the camera count and mark each camera's floor</div>
+      <div class="x_dvrs">${dvrs.map(xDvrBlock).join('')}</div><button type="button" class="btn-ghost x_adddvr">＋ Add DVR</button></div>`;
+  }
+  return '';
+}
+function extraBind(root){
+  root.addEventListener('click', e => {
+    const t = e.target.closest('button'); if (!t) return;
+    if (t.classList.contains('x_addpart')) root.querySelector('.x_parts').insertAdjacentHTML('beforeend', xPartRow('', null, false, true));
+    else if (t.classList.contains('x_del')) t.closest('.part').remove();
+    else if (t.classList.contains('x_adddvr')) { const w = root.querySelector('.x_dvrs'); w.insertAdjacentHTML('beforeend', xDvrBlock({}, w.children.length)); }
+    else if (t.classList.contains('x_deldvr')) t.closest('.xdvr').remove();
+    else if (t.classList.contains('x_applyfloor')) { const d = t.closest('.xdvr'), f = d.querySelector('.d_allfloor').value.trim(); d.querySelectorAll('.c_floor').forEach(i => i.value = f); }
+  });
+  root.addEventListener('input', e => {
+    if (e.target.classList.contains('pg_count')) {
+      const box = e.target.closest('.pgroup').querySelector('.punits');
+      const n = Math.max(0, Math.min(20, parseInt(e.target.value, 10) || 0));
+      while (box.children.length > n) box.lastElementChild.remove();
+      while (box.children.length < n) box.insertAdjacentHTML('beforeend', xUnitRow({}, box.children.length));
+      return;
+    }
+    if (!e.target.classList.contains('d_count')) return;
+    const d = e.target.closest('.xdvr'), box = d.querySelector('.xcams');
+    const n = Math.max(0, Math.min(64, parseInt(e.target.value, 10) || 0));
+    while (box.children.length > n) box.lastElementChild.remove();
+    while (box.children.length < n) box.insertAdjacentHTML('beforeend', xCamRow({}, box.children.length));
+  });
+}
+function extraCollect(root){
+  const out = {specs: null, parts: null, dvrs: null}, box = root.querySelector('.xbox'); if (!box) return out;
+  const v = (el, c) => el.querySelector(c).value.trim(), kind = box.dataset.kind;
+  if (kind === 'desktop' || kind === 'pos') { const sp = {processor: v(box, '.s_cpu'), ram: v(box, '.s_ram'), storage: v(box, '.s_disk')}; out.specs = (sp.processor || sp.ram || sp.storage) ? sp : null; }
+  if (kind === 'desktop' || kind === 'pos') {
+    const units = [...box.querySelectorAll('.pgroup')].flatMap(g => [...g.querySelectorAll('.punit')].map(u => ({id: u.dataset.id || '', role: g.dataset.role, model: v(u, '.p_model'), serial: v(u, '.p_serial')})));
+    out.parts = units.concat([...box.querySelectorAll('.part')].filter(r => r.querySelector('.p_on').checked)
+      .map(r => ({id: r.dataset.id || '', role: r.dataset.fixed === '1' ? r.dataset.role : v(r, '.p_role'), model: v(r, '.p_model'), serial: v(r, '.p_serial')})).filter(p => p.role));
+  }
+  if (kind === 'cctv') out.dvrs = [...box.querySelectorAll('.xdvr')].map(d => ({
+    id: d.dataset.id || '', name: v(d, '.d_name') || 'DVR', model: v(d, '.d_model'), serial: v(d, '.d_serial'),
+    cameras: [...d.querySelectorAll('.cam')].map(c => ({id: c.dataset.id || '', name: v(c, '.c_name') || 'Camera', floor: v(c, '.c_floor'), model: v(c, '.c_model')}))}));
+  return out;
+}
+// existing child assets -> the same shape the form edits
+function childrenToExtra(p, all){
+  const kids = all.filter(x => x.rootId === p.id).sort(byOrder), lab = k => k.label || k.name;
+  return {specs: p.specs || null,
+    parts: kids.filter(k => k.parentId === p.id && k.type !== 'DVR').map(k => ({id: k.id, role: k.type, model: k.model || '', serial: k.serial || ''})),
+    dvrs: kids.filter(k => k.parentId === p.id && k.type === 'DVR').map(d => ({id: d.id, name: lab(d), model: d.model || '', serial: d.serial || '',
+      cameras: kids.filter(c => c.parentId === d.id).map(c => ({id: c.id, name: lab(c), floor: c.floor || '', model: c.model || ''}))}))};
+}
+const normEx = x => JSON.stringify([x.specs || null,
+  (x.parts || []).map(p => [p.id || '', p.role, p.model || '', p.serial || '']),
+  (x.dvrs || []).map(d => [d.id || '', d.name, d.model || '', d.serial || '', (d.cameras || []).map(c => [c.id || '', c.name, c.floor || '', c.model || ''])])]);
+// work out which child assets to create / update / remove for a parent
+function planChildren(p, ex, existing){
+  const nid = () => p.id + '_' + Math.random().toString(36).slice(2, 8), items = []; let order = 0;
+  const rc = {}, rs = {}; (ex.parts || []).forEach(x => { rc[x.role] = (rc[x.role] || 0) + 1; });
+  (ex.parts || []).forEach(x => { const lab = rc[x.role] > 1 ? x.role + ' ' + (rs[x.role] = (rs[x.role] || 0) + 1) : x.role;
+    items.push({id: x.id || nid(), parentId: p.id, type: x.role, label: lab, name: p.name + ' – ' + lab, model: x.model, serial: x.serial, order: order++}); });
+  (ex.dvrs || []).forEach(d => {
+    const did = d.id || nid(), cams = d.cameras || [];
+    items.push({id: did, parentId: p.id, type: 'DVR', label: d.name, name: p.name + ' – ' + d.name, model: d.model, serial: d.serial, cameraCount: cams.length, order: order++});
+    cams.forEach(c => items.push({id: c.id || nid(), parentId: did, type: 'Camera', label: c.name, name: p.name + ' – ' + d.name + ' – ' + c.name, model: c.model, floor: c.floor, order: order++}));
+  });
+  const keep = new Set(items.map(i => i.id));
+  return {items, remove: existing.filter(e => !keep.has(e.id)), old: new Map(existing.map(e => [e.id, e]))};
+}
+// cascade = fields to push onto already-existing children (e.g. new location / person)
+async function writeChildren(p, plan, by, cascade){
+  const now = Date.now();
+  const ops = plan.items.map(it => {
+    const f = {name: it.name, label: it.label, type: it.type, parentId: it.parentId, rootId: p.id, model: it.model || '', serial: it.serial || '', order: it.order};
+    if (it.type === 'Camera') f.floor = it.floor || '';
+    if (it.type === 'DVR') f.cameraCount = it.cameraCount || 0;
+    if (plan.old.has(it.id)) return db.doc('assets/' + it.id).update({...f, ...(cascade || {})});
+    return db.doc('assets/' + it.id).set({id: it.id, ...f, locationId: p.locationId, locationName: p.locationName, assignedTo: p.assignedTo || '',
+      purchaseDate: p.purchaseDate || '', warrantyUntil: p.warrantyUntil || '', notes: '', condition: 'Good', status: 'Active', createdAt: now,
+      history: [{type:'created', at: now, by: by || '', note: 'Part of ' + p.name, person: p.assignedTo || ''}]});
+  });
+  plan.remove.forEach(e => ops.push(db.doc('assets/' + e.id).delete()));
+  const res = await Promise.allSettled(ops);
+  return res.filter(r => r.status === 'rejected').length;
+}
+function extraSummary(a, kids){
+  const m = 'style="margin:2px 0 0;"', sp = a.specs || {}, out = [];
+  const spec = [sp.processor, sp.ram, sp.storage].filter(Boolean).join(' · ');
+  if (spec) out.push(`<div class="ticket-meta" ${m}>${escapeHtml(spec)}</div>`);
+  if (assetKind(a.type) === 'pos') {
+    const cnt = {}; kids.filter(isAccessory).forEach(k => { const r = String(k.type).toLowerCase() === 'printer' ? 'POS printer' : k.type; cnt[r] = (cnt[r] || 0) + 1; });
+    const line = Object.keys(cnt).map(r => escapeHtml(r) + ' ×' + cnt[r]).join(' · ');
+    if (line) out.push(`<div class="ticket-meta" ${m}>${line}</div>`);
+    return out.join('');
+  }
+  const acc = kids.filter(isAccessory).length, dv = kids.filter(k => k.type === 'DVR').length, cm = kids.filter(k => k.type === 'Camera').length;
+  const bits = [acc ? acc + ' accessor' + (acc === 1 ? 'y' : 'ies') : '', dv ? dv + ' DVR' + (dv === 1 ? '' : 's') : '', cm ? cm + ' camera' + (cm === 1 ? '' : 's') : ''].filter(Boolean);
+  if (bits.length) out.push(`<div class="ticket-meta" ${m}>${bits.join(' · ')}</div>`);
+  return out.join('');
+}
+// "Accessories / DVRs & cameras" block on the asset page
+function extraView(a, all){
+  const e = escapeHtml, sp = a.specs || {}; let h = '';
+  if (sp.processor || sp.ram || sp.storage) h += `<h2 class="ct">${assetKind(a.type) === 'pos' ? 'POS computer details' : 'CPU details'}</h2><div class="ticket-meta" style="line-height:1.9;font-size:.88rem;margin:0 0 12px;"><b>Processor:</b> ${e(sp.processor || '—')}<br><b>RAM:</b> ${e(sp.ram || '—')}<br><b>Hard disk:</b> ${e(sp.storage || '—')}</div>`;
+  const rows = descendantsOf(all, a.id);
+  if (rows.length) {
+    const title = a.type === 'DVR' ? 'Cameras' : rows.some(r => r.k.type === 'DVR') ? 'DVRs & cameras' : assetKind(a.type) === 'pos' ? 'POS sub-items' : 'Accessories';
+    const hasFloor = rows.some(r => r.k.floor), stc = x => x === 'Active' ? 'badge-resolved' : x === 'In Repair' ? 'badge-in-progress' : 'badge-open';
+    const posCnt = {}; if (assetKind(a.type) === 'pos') rows.filter(r => isAccessory(r.k)).forEach(r => { const t = String(r.k.type).toLowerCase() === 'printer' ? 'POS printer' : r.k.type; posCnt[t] = (posCnt[t] || 0) + 1; });
+    if (Object.keys(posCnt).length) h += `<div class="ticket-meta" style="margin:0 0 10px;font-size:.88rem;"><b>Count:</b> ${Object.keys(posCnt).map(t => e(t) + ' ×' + posCnt[t]).join(' · ')}</div>`;
+    h += `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;"><h2 class="ct" style="margin:0;">${title} (${rows.length})</h2><button class="btn-ghost" id="qrSet" style="padding:7px 12px;font-size:.8rem;">🖨 All QR labels</button></div>
+      <table class="tbl" style="margin-bottom:8px;"><thead><tr><th>Item</th><th>Brand / model</th><th>Serial</th>${hasFloor ? '<th>Floor</th>' : ''}<th>Status</th><th></th></tr></thead><tbody>${rows.map(({k, d}) => `<tr>
+        <td style="padding-left:${10 + d * 18}px;"><a href="${e(assetUrl(k.id))}" style="color:inherit;"><b>${e(k.label || k.name)}</b></a><div class="ticket-meta" style="margin:2px 0 0;">${e(k.type)}${k.type === 'DVR' ? ' · ' + (k.cameraCount || 0) + ' cameras' : ''}</div></td>
+        <td>${e(k.model || '—')}</td><td>${e(k.serial || '—')}</td>${hasFloor ? `<td>${e(k.floor || '—')}</td>` : ''}
+        <td><span class="badge ${stc(k.status || 'Active')}">${e(k.status || 'Active')}</span></td>
+        <td style="text-align:right;"><button class="btn-ghost kqr" data-id="${e(k.id)}" style="padding:6px 11px;font-size:.78rem;">QR</button></td></tr>`).join('')}</tbody></table>`;
+  }
+  return h ? `<div class="card" style="overflow-x:auto;">${h}</div>` : '';
+}
+
+async function ensureXlsx(){
+  if (window.XLSX) return true;
+  for (const u of ['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'])
+    if (await loadScript(u) && window.XLSX) return true;
+  return false;
+}
+async function exportAssetsXlsx(rows, allAssets){
+  const v = x => x == null ? '' : x;
+  const all = allAssets || rows;
+  const tops = rows.filter(a => !isChildAsset(a, all));
+  const fdate = t => t ? new Date(t).toISOString().slice(0,10) : '';
+  const kidsOf = a => descendantsOf(all, a.id).map(x => x.k);
+  const aoa = [['Asset ID','Asset','Type','Location','Assigned to','Serial / tag','Brand / model','Purchase date','Warranty until','Condition','Status','Notes','Processor','RAM','Hard disk','Scanners','POS printers','Cash drawers','Deactivators','Accessories','DVRs','Cameras','QR link','Added']];
+  tops.forEach(a => { const k = kidsOf(a), sp = a.specs || {};
+    aoa.push([a.id, a.name, a.type, a.locationName || a.locationId, a.assignedTo, a.serial, a.model, a.purchaseDate, a.warrantyUntil, a.condition || 'Good', a.status || 'Active', a.notes, sp.processor, sp.ram, sp.storage,
+      ...POS_COUNTED.map(r => assetKind(a.type) === 'pos' ? k.filter(x => roleIs({role: x.type}, r)).length : ''),
+      k.filter(isAccessory).length, k.filter(x => x.type === 'DVR').length, k.filter(x => x.type === 'Camera').length, assetUrl(a.id), fdate(a.createdAt)].map(v)); });
+  const stamp = todayStr();
+  const save = (blob, name) => { const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = name; l.click(); };
+  // Components: every accessory / POS sub-item — one row (and one QR link) each
+  const comp = [['Asset','Item','Brand / model','Serial','Item ID','Parent type','Location','Condition','Status','QR link']];
+  // CCTV: one row per camera, with the DVR it belongs to
+  const cctv = [['Asset','DVR','DVR model','DVR serial','Camera','Floor','Camera model','Cameras on this DVR','DVR ID','DVR QR link','Camera ID','Camera QR link','Location']];
+  tops.forEach(a => { const kids = kidsOf(a);
+    kids.filter(isAccessory).forEach(k => comp.push([a.name, k.type, k.model, k.serial, k.id, a.type, k.locationName || a.locationName, k.condition || 'Good', k.status || 'Active', assetUrl(k.id)].map(v)));
+    kids.filter(k => k.type === 'DVR').forEach(d => {
+      const cams = kids.filter(c => c.parentId === d.id).sort(byOrder);
+      const base = [a.name, d.label || d.name, d.model, d.serial];
+      const tail = [cams.length, d.id, assetUrl(d.id)];
+      if (!cams.length) cctv.push([...base, '', '', '', ...tail, '', '', a.locationName].map(v));
+      cams.forEach(c => cctv.push([...base, c.label || c.name, c.floor, c.model, ...tail, c.id, assetUrl(c.id), a.locationName].map(v)));
+    }); });
+  if (!(await ensureXlsx())) {
+    const html = '<html><head><meta charset="UTF-8"></head><body><table border="1">' + aoa.map((r,i) => '<tr>' + r.map(c => `<${i?'td':'th'}>${escapeHtml(c)}</${i?'td':'th'}>`).join('') + '</tr>').join('') + '</table></body></html>';
+    save(new Blob([html], {type:'application/vnd.ms-excel'}), 'asset_report_' + stamp + '.xls');
+    return;
+  }
+  const tally = (list, f) => { const m = {}; list.forEach(a => { const k = f(a) || '—'; m[k] = (m[k] || 0) + 1; }); return Object.entries(m).sort((x,y) => y[1] - x[1]); };
+  const allKids = tops.flatMap(kidsOf), acc = allKids.filter(isAccessory), dvrs = allKids.filter(k => k.type === 'DVR'), cams = allKids.filter(k => k.type === 'Camera');
+  const sum = [['IT Asset Report'], ['Generated', stamp], ['Assets included', tops.length], ['Accessories & sub-items (each with its own QR)', acc.length], ['DVRs', dvrs.length], ['Cameras', cams.length], []];
+  [['By type', tops, a => a.type], ['By location', tops, a => a.locationName || a.locationId], ['By status', tops, a => a.status || 'Active'], ['By condition', tops, a => a.condition || 'Good'],
+   ['Accessories & sub-items by item', acc, a => a.type], ['Cameras by floor', cams, a => a.floor || 'Not marked']]
+    .forEach(([t, list, f]) => { if (!list.length) return; sum.push([t, 'Count']); tally(list, f).forEach(r => sum.push(r)); sum.push([]); });
+  const withKids = tops.filter(a => kidsOf(a).length);
+  if (withKids.length) { sum.push(['Accessories per asset']); sum.push(['Asset', 'Type', 'Location', 'Accessories', 'DVRs', 'Cameras', 'Total QR codes (incl. asset)']);
+    withKids.forEach(a => { const k = kidsOf(a); sum.push([a.name, a.type, a.locationName || a.locationId, k.filter(isAccessory).length, k.filter(x => x.type === 'DVR').length, k.filter(x => x.type === 'Camera').length, k.length + 1].map(v)); }); sum.push([]); }
+  const ht = h => [h.type === 'repair' ? (h.outcome === 'completed' ? 'Repair completed' : 'Sent for repair') : '', h.type === 'repair' && h.priority ? h.priority + ' priority' : '', h.vendor, h.cost ? 'cost ' + h.cost : '',
+    h.type === 'transfer' ? 'Moved ' + (h.from || '—') + ' → ' + h.to + (h.person ? ' · ' + h.person : '') : '',
+    h.type === 'condition' ? 'Condition ' + (h.from || '—') + ' → ' + h.to : '', h.type === 'edit' ? 'Edited: ' + (h.changes || []).join(', ') : '',
+    h.type === 'created' && h.person ? 'Assigned to ' + h.person : '', h.note].filter(Boolean).join(' · ');
+  const hist = [['Asset','Item ID','Date','Event','Details','By']];
+  tops.flatMap(a => [a, ...kidsOf(a)]).forEach(a => (a.history || []).slice().sort((x,y) => (x.at||0) - (y.at||0)).forEach(h => hist.push([a.name, a.id, h.at ? new Date(h.at).toLocaleString() : '', h.type, ht(h), h.by || ''])));
+  const wb = XLSX.utils.book_new();
+  [['Assets', aoa], ['Components', comp], ['CCTV', cctv], ['Summary', sum], ['History', hist]].forEach(([n, data]) => {
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = (data[0] || []).map((_, i) => ({wch: Math.min(48, Math.max(10, ...data.map(r => String(r[i] == null ? '' : r[i]).length)) + 2)}));
+    XLSX.utils.book_append_sheet(wb, ws, n);
+  });
+  XLSX.writeFile(wb, 'asset_report_' + stamp + '.xlsx');
+}
+
+// ---------- IMPORT / TEMPLATE (same sheets and columns as the Excel report) ----------
+const ASSET_COLS = ['Asset','Type','Location','Assigned to','Serial / tag','Brand / model','Purchase date','Warranty until','Condition','Status','Notes','Processor','RAM','Hard disk','Added'];
+const COMP_COLS = ['Asset','Item','Brand / model','Serial'];
+const CCTV_COLS = ['Asset','DVR','DVR model','DVR serial','Camera','Floor','Camera model'];
+const COL_ALIASES = {
+  name:['asset','assetname','name'], type:['type','assettype'], location:['location','site'],
+  assignedTo:['assignedto','assignee'], serial:['serialtag','serial','serialno','serialnumber','assettag','tag'],
+  model:['brandmodel','model','brand'], purchaseDate:['purchasedate','purchased'],
+  warrantyUntil:['warrantyuntil','warranty','warrantyexpiry'], condition:['condition'], status:['status'], notes:['notes','note','remarks'],
+  processor:['processor','processortype','cpu'], ram:['ram','memory'], storage:['harddisk','harddrive','storage','disk']
+};
+const IMPORT_MAX = 500;
+const normHead = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+function parseXlDate(v){
+  if (v == null || String(v).trim() === '') return {val:''};
+  const p2 = n => String(n).padStart(2, '0');
+  const build = (y, m, d) => {
+    y = +y; m = +m; d = +d;
+    const t = new Date(Date.UTC(y, m - 1, d));
+    return (y >= 1990 && y <= 2100 && t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d) ? {val: y + '-' + p2(m) + '-' + p2(d)} : {bad:true};
+  };
+  if (typeof v === 'number') { const d = XLSX.SSF.parse_date_code(v); return d ? build(d.y, d.m, d.d) : {bad:true}; }
+  const t = String(v).trim(); let m;
+  if ((m = t.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/))) return build(m[1], m[2], m[3]);   // 2026-09-24
+  if ((m = t.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/))) return build(m[3], m[2], m[1]);  // 24/09/2026 (day first)
+  return {bad:true};
+}
+
+function parseAssetRows(aoa, assets, locations){
+  const alias = {}; Object.entries(COL_ALIASES).forEach(([k, arr]) => arr.forEach(a => alias[a] = k));
+  const hi = aoa.findIndex((r, i) => i < 10 && r.some(c => alias[normHead(c)] === 'name'));
+  if (hi < 0) return {error: 'Couldn\'t find the "Asset" column. Use the template (or an Asset report) and keep its header row.'};
+  const col = {};
+  aoa[hi].forEach((c, i) => { const k = alias[normHead(c)]; if (k && !(k in col)) col[k] = i; });
+  const raw = (r, k) => (k in col && r[col[k]] != null) ? r[col[k]] : '';
+  const get = (r, k) => String(raw(r, k)).trim();
+  const pick = (val, list, dflt, label, warns) => {
+    if (!val) return dflt;
+    const m = list.find(x => x.toLowerCase() === val.toLowerCase());
+    if (m) return m;
+    warns.push(label + ' "' + val + '" not recognised — set to ' + dflt);
+    return dflt;
+  };
+  const locByName = new Map(locations.map(l => [String(l.name || '').trim().toLowerCase(), l]));
+  const serials = new Map(assets.filter(a => a.serial).map(a => [String(a.serial).trim().toLowerCase(), a.name]));
+  const seen = new Map();
+  const ok = [], skipped = []; let total = 0, capped = false;
+  for (let i = hi + 1; i < aoa.length; i++) {
+    const r = aoa[i];
+    if (!r || r.every(c => String(c == null ? '' : c).trim() === '')) continue;
+    if (++total > IMPORT_MAX) { capped = true; break; }
+    const rowNo = i + 1, errs = [], warns = [];
+    const name = get(r, 'name');
+    if (!name) errs.push('Asset name is missing');
+    let loc = null; const ln = get(r, 'location');
+    if (ln) {
+      loc = locByName.get(ln.toLowerCase());
+      if (!loc) errs.push('Location "' + ln + '" ' + (isAdmin() ? 'not found — add it under Locations first' : 'is not one of your locations'));
+    } else if (locations.length === 1) loc = locations[0];
+    else errs.push('Location is missing');
+    const serial = get(r, 'serial');
+    if (serial) {
+      const k = serial.toLowerCase();
+      if (serials.has(k)) errs.push('Serial "' + serial + '" already exists (' + serials.get(k) + ')');
+      else if (seen.has(k)) errs.push('Serial "' + serial + '" is repeated from row ' + seen.get(k));
+    }
+    let type = get(r, 'type');
+    if (!type) type = ASSET_TYPES.includes('Other') ? 'Other' : ASSET_TYPES[0];
+    else { const m = ASSET_TYPES.find(t => t.toLowerCase() === type.toLowerCase()); if (m) type = m; else warns.push('New type "' + type + '" — not in your asset type list'); }
+    const dates = {};
+    [['purchaseDate', 'Purchase date'], ['warrantyUntil', 'Warranty until']].forEach(([k, lbl]) => {
+      const d = parseXlDate(raw(r, k));
+      if (d.bad) warns.push(lbl + ' "' + raw(r, k) + '" not understood — left blank');
+      dates[k] = d.val || '';
+    });
+    const condition = pick(get(r, 'condition'), CONDITIONS, 'Good', 'Condition', warns);
+    const status = pick(get(r, 'status'), ASSET_STATUSES, 'Active', 'Status', warns);
+    if (errs.length) { skipped.push({row: rowNo, name, reason: errs.join('; ')}); continue; }
+    if (serial) seen.set(serial.toLowerCase(), rowNo);
+    ok.push({row: rowNo, warns, a: {name, type, locationId: loc.id, locationName: loc.name, assignedTo: get(r, 'assignedTo'), serial,
+      model: get(r, 'model'), purchaseDate: dates.purchaseDate, warrantyUntil: dates.warrantyUntil, condition, status, notes: get(r, 'notes'),
+      specs: (get(r, 'processor') || get(r, 'ram') || get(r, 'storage')) ? {processor: get(r, 'processor'), ram: get(r, 'ram'), storage: get(r, 'storage')} : null, parts: null, dvrs: null}});
+  }
+  return {ok, skipped, capped};
+}
+
+
+// reads the optional "Components" and "CCTV" sheets and attaches their rows to the assets on the "Assets" sheet (matched by asset name)
+function readSubSheets(wb, ok, skipped){
+  const sheet = n => { const k = wb.SheetNames.find(x => normHead(x) === n); return k ? XLSX.utils.sheet_to_json(wb.Sheets[k], {header:1, raw:true, defval:''}) : null; };
+  const table = (aoa, A) => {
+    if (!aoa) return [];
+    const alias = {}; Object.entries(A).forEach(([k, arr]) => arr.forEach(x => alias[x] = k));
+    const hi = aoa.findIndex((r, i) => i < 10 && r.some(c => alias[normHead(c)] === 'asset'));
+    if (hi < 0) return [];
+    const col = {}; aoa[hi].forEach((c, i) => { const k = alias[normHead(c)]; if (k && !(k in col)) col[k] = i; });
+    const out = [];
+    for (let i = hi + 1; i < aoa.length; i++) {
+      const r = aoa[i]; if (!r || r.every(c => String(c == null ? '' : c).trim() === '')) continue;
+      const o = {row: i + 1}; Object.keys(A).forEach(k => o[k] = (k in col && r[col[k]] != null) ? String(r[col[k]]).trim() : ''); out.push(o);
+    }
+    return out;
+  };
+  const byName = new Map(); ok.forEach(o => { const k = o.a.name.toLowerCase(); if (!byName.has(k)) byName.set(k, o); });
+  const orphan = (sh, x) => skipped.push({row: x.row, name: x.asset, reason: sh + ' sheet: asset not found on the Assets sheet (or that asset was skipped)'});
+  table(sheet('components'), {asset:['asset','assetname'], item:['item','component','accessory','subitem'], model:['brandmodel','model'], serial:['serial','serialtag']}).forEach(x => {
+    if (!x.item && !x.model && !x.serial) return;
+    const o = byName.get(x.asset.toLowerCase()); if (!o) return orphan('Components', x);
+    if (!x.item) return skipped.push({row: x.row, name: x.asset, reason: 'Components sheet: Item is missing'});
+    (o.a.parts = o.a.parts || []).push({role: x.item, model: x.model, serial: x.serial});
+  });
+  table(sheet('cctv'), {asset:['asset','assetname'], dvr:['dvr','dvrname'], dvrModel:['dvrmodel'], dvrSerial:['dvrserial'], camera:['camera','cameraname'], floor:['floor'], camModel:['cameramodel']}).forEach(x => {
+    const o = byName.get(x.asset.toLowerCase()); if (!o) return orphan('CCTV', x);
+    const dn = x.dvr || 'DVR 1';
+    const list = o.a.dvrs = o.a.dvrs || [];
+    let d = list.find(v => v.name.toLowerCase() === dn.toLowerCase());
+    if (!d) { d = {name: dn, model: x.dvrModel, serial: x.dvrSerial, cameraCount: 0, cameras: []}; list.push(d); }
+    else { if (!d.model) d.model = x.dvrModel; if (!d.serial) d.serial = x.dvrSerial; }
+    if (x.camera || x.floor || x.camModel) { d.cameras.push({name: x.camera || 'Camera ' + (d.cameras.length + 1), floor: x.floor, model: x.camModel}); d.cameraCount = d.cameras.length; }
+  });
+}
+const compLine = a => a.dvrs && a.dvrs.length ? a.dvrs.length + ' DVR' + (a.dvrs.length === 1 ? '' : 's') + ', ' + a.dvrs.reduce((n, d) => n + d.cameras.length, 0) + ' cameras'
+  : a.parts && a.parts.length ? a.parts.length + ' accessories / sub-items' : '';
+
+async function downloadAssetTemplate(locations){
+  const save = (blob, name) => { const l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = name; l.click(); };
+  if (!(await ensureXlsx())) {   // offline fallback: header-only CSV that Excel opens
+    save(new Blob(['\ufeff' + ASSET_COLS.map(c => '"' + c + '"').join(',') + '\r\n'], {type:'text/csv'}), 'asset_import_template.csv');
+    return;
+  }
+  const locNames = locations.map(l => l.name).join(', ') || '(no locations yet)';
+  const help = [
+    ['How to fill in this template'],
+    ['1. Add one asset per row on the "Assets" sheet, then upload the file with "Import Excel" on the IT Assets tab.'],
+    ['2. Keep the header rows as they are. Only "Asset" is required (and "Location", unless you only have one location).'],
+    ['3. Desktop PCs: fill Processor, RAM and Hard disk on the Assets sheet, and list each accessory (keyboard, monitor, mouse) on the Components sheet. Every accessory is saved as its own asset with its own QR code.'],
+    ['4. POS terminals: list scanner, printer, cash drawer, deactivator, POS power supply and printer power supply on the Components sheet.'],
+    ['5. CCTV: add one row per camera on the CCTV sheet. Rows with the same DVR name are grouped under that DVR, and the camera count per DVR is worked out for you. Each DVR and each camera gets its own QR code.'],
+    ['6. Components and CCTV rows are linked to an asset by its name — the Asset column must match the name on the Assets sheet exactly.'],
+    ['7. Rows whose serial / tag already exists in the system are skipped, so the same file is safe to upload twice.'],
+    [],
+    ['Assets sheet'],
+    ['Column', 'What to enter', 'Allowed values', 'Example'],
+    ['Asset', 'Asset name (required)', '', 'Front desk PC'],
+    ['Type', 'Kind of device', ASSET_TYPES.join(', '), 'Desktop'],
+    ['Location', 'Must match a location name exactly', locNames, locations[0] ? locations[0].name : 'Head Office'],
+    ['Assigned to', 'Person using it (optional)', '', 'Nadeesha Perera'],
+    ['Serial / tag', 'Serial number or asset tag (optional)', '', 'SN-00231'],
+    ['Brand / model', 'Optional', '', 'Dell OptiPlex 7010'],
+    ['Purchase date', 'Optional', 'YYYY-MM-DD or DD/MM/YYYY', '2025-03-14'],
+    ['Warranty until', 'Optional', 'YYYY-MM-DD or DD/MM/YYYY', '2028-03-14'],
+    ['Condition', 'Optional — defaults to Good', CONDITIONS.join(', '), 'Good'],
+    ['Status', 'Optional — defaults to Active', ASSET_STATUSES.join(', '), 'Active'],
+    ['Notes', 'Optional', '', 'Front desk PC'],
+    ['Processor', 'Desktop PCs only (optional)', '', 'Intel Core i5-12400'],
+    ['RAM', 'Desktop PCs only (optional)', '', '8 GB DDR4'],
+    ['Hard disk', 'Desktop PCs only (optional)', '', '512 GB SSD'],
+    ['Added', 'Leave blank — filled in automatically', '', ''],
+    [],
+    ['Components sheet (desktop accessories and POS sub-items)'],
+    ['Column', 'What to enter', 'Allowed values', 'Example'],
+    ['Asset', 'Name of the desktop / POS asset (required)', 'Same as on the Assets sheet', 'Front desk PC'],
+    ['Item', 'Accessory or sub-item (required)', 'Desktop: Keyboard, Monitor, Mouse.  POS: ' + KIND_PARTS.pos.join(', ') + '.  Other names are also accepted.', 'Keyboard'],
+    ['Brand / model', 'Optional', '', 'Logitech K120'],
+    ['Serial', 'Optional', '', 'KB-2231'],
+    [],
+    ['CCTV sheet (one row per camera)'],
+    ['Column', 'What to enter', 'Allowed values', 'Example'],
+    ['Asset', 'Name of the CCTV asset (required)', 'Same as on the Assets sheet', 'Main building CCTV'],
+    ['DVR', 'DVR name — cameras with the same name share one DVR', '', 'DVR 1'],
+    ['DVR model', 'Optional', '', 'Hikvision DS-7216'],
+    ['DVR serial', 'Optional', '', 'DVR-0042'],
+    ['Camera', 'Camera name', '', 'Camera 1'],
+    ['Floor', 'Floor the camera is on', FLOORS.join(', ') + ' (or any text)', 'Ground floor'],
+    ['Camera model', 'Optional', '', 'Hikvision 2MP dome']
+  ];
+  const wb = XLSX.utils.book_new();
+  const addSheet = (name, cols, widths) => { const w = XLSX.utils.aoa_to_sheet([cols]); w['!cols'] = widths.map(x => ({wch: x})); XLSX.utils.book_append_sheet(wb, w, name); };
+  addSheet('Assets', ASSET_COLS, [26, 14, 18, 20, 16, 18, 15, 15, 12, 12, 28, 24, 14, 14, 12]);
+  addSheet('Components', COMP_COLS, [26, 24, 24, 20]);
+  addSheet('CCTV', CCTV_COLS, [26, 14, 22, 18, 18, 18, 24]);
+  const wh = XLSX.utils.aoa_to_sheet(help);
+  wh['!cols'] = [{wch:16}, {wch:46}, {wch:70}, {wch:22}];
+  XLSX.utils.book_append_sheet(wb, wh, 'How to fill');
+  XLSX.writeFile(wb, 'asset_import_template.xlsx');
+}
+
+async function openAssetImport(file, assets, locations, done){
+  const bg = document.createElement('div'); bg.className = 'qr-modal-bg';
+  const box = document.createElement('div'); box.className = 'qr-modal edit-modal'; box.style.maxWidth = '560px';
+  bg.appendChild(box); document.body.appendChild(bg);
+  const close = () => bg.remove();
+  const $ = id => box.querySelector('#' + id);
+  const H = '<h1 style="font-size:1.1rem;margin:0 0 4px;">Import assets</h1>';
+  const fail = t => { box.innerHTML = H + `<div class="ticket-meta" style="color:var(--danger);margin:10px 0 14px;line-height:1.5;">${escapeHtml(t)}</div><button class="btn-ghost" id="imp_close" style="width:100%;">Close</button>`; $('imp_close').onclick = close; };
+  box.innerHTML = H + `<div class="ticket-meta">Reading ${escapeHtml(file.name)}…</div>`;
+
+  let parsed;
+  try {
+    if (!(await ensureXlsx())) return fail("Couldn't load the Excel reader — check your connection and try again.");
+    const wb = XLSX.read(await file.arrayBuffer(), {type:'array'});
+    const ws = wb.Sheets['Assets'] || wb.Sheets[wb.SheetNames[0]];
+    if (!ws) return fail('That file has no sheets.');
+    parsed = parseAssetRows(XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''}), assets, locations);
+    if (!parsed.error) readSubSheets(wb, parsed.ok, parsed.skipped);
+  } catch(e){ return fail("Couldn't read that file. Please upload an .xlsx, .xls or .csv file."); }
+  if (parsed.error) return fail(parsed.error);
+  const {ok, skipped, capped} = parsed;
+
+  const more = n => `<div class="ticket-meta" style="margin:6px 0 0;">…and ${n} more</div>`;
+  const okRows = ok.slice(0, 60).map(o => `<div class="loc-item" style="display:block;padding:8px 0;">
+      <div class="loc-name" style="font-size:.88rem;">${escapeHtml(o.a.name)}</div>
+      <div class="ticket-meta" style="margin:2px 0 0;">${escapeHtml([o.a.type, o.a.locationName, o.a.serial, compLine(o.a)].filter(Boolean).join(' · '))}</div>
+      ${o.warns.map(w => `<div class="ticket-meta" style="margin:2px 0 0;color:var(--warn);">⚠ ${escapeHtml(w)}</div>`).join('')}</div>`).join('') + (ok.length > 60 ? more(ok.length - 60) : '');
+  const skRows = skipped.slice(0, 60).map(x => `<div class="ticket-meta" style="margin:0 0 6px;color:var(--danger);line-height:1.4;"><b>Row ${x.row}${x.name ? ' · ' + escapeHtml(x.name) : ''}</b> — ${escapeHtml(x.reason)}</div>`).join('') + (skipped.length > 60 ? more(skipped.length - 60) : '');
+  const box2 = 'border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 12px;max-height:200px;overflow-y:auto;margin-bottom:12px;';
+  box.innerHTML = H + `
+    <div class="ticket-meta" style="margin:0 0 12px;">${escapeHtml(file.name)}</div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <span class="badge badge-resolved">${ok.length} ready to import</span>
+      ${skipped.length ? `<span class="badge badge-open">${skipped.length} skipped</span>` : ''}
+    </div>
+    ${capped ? `<div class="ticket-meta" style="color:var(--warn);margin-bottom:10px;">Only the first ${IMPORT_MAX} rows were read. Upload the rest in a second file.</div>` : ''}
+    ${ok.length ? `<div class="ticket-meta" style="margin:0 0 6px;font-weight:700;">To be added</div><div style="${box2}">${okRows}</div>` : ''}
+    ${skipped.length ? `<div class="ticket-meta" style="margin:0 0 6px;font-weight:700;">Skipped — fix these rows and upload again</div><div style="${box2}padding-top:10px;padding-bottom:4px;">${skRows}</div>` : ''}
+    <button class="btn-primary" id="imp_go" ${ok.length ? '' : 'disabled'}>Import ${ok.length} asset${ok.length === 1 ? '' : 's'}</button>
+    <button class="btn-ghost" id="imp_cancel" style="width:100%;margin-top:8px;">Cancel</button>
+    <div id="imp_msg" class="ticket-meta" style="margin-top:10px;"></div>`;
+  $('imp_cancel').onclick = close;
+  $('imp_go').onclick = async () => {
+    const msg = $('imp_msg');
+    $('imp_go').disabled = true; $('imp_cancel').disabled = true;
+    const by = isAdmin() ? '' : ((SESSION && SESSION.name) || '');
+    const stamp = Date.now(), base = stamp.toString(36);
+    let added = 0; const failed = [];
+    for (let i = 0; i < ok.length; i += 10) {
+      const chunk = ok.slice(i, i + 10);
+      msg.style.color = 'var(--muted)'; msg.textContent = 'Importing… ' + i + ' of ' + ok.length;
+      const res = await Promise.allSettled(chunk.map(async (o, j) => {
+        const id = 'asset_' + base + (i + j).toString(36).padStart(2, '0');
+        const {parts, dvrs, ...rest} = o.a;
+        const doc = {id, ...rest, createdAt: stamp, history: [{type:'created', at: stamp, by, note: 'Imported from Excel', person: o.a.assignedTo}]};
+        await db.doc('assets/' + id).set(doc);
+        if ((parts && parts.length) || (dvrs && dvrs.length)) {
+          const bad = await writeChildren(doc, planChildren(doc, {parts, dvrs}, []), by);
+          if (bad) throw new Error('some accessories failed');
+        }
+      }));
+      res.forEach((r, j) => r.status === 'fulfilled' ? added++ : failed.push(chunk[j]));
+    }
+    box.innerHTML = H + `<div class="card" style="margin:14px 0;text-align:center;">
+        <div style="font-size:2rem;">${failed.length ? '⚠️' : '✅'}</div>
+        <b>${added} asset${added === 1 ? '' : 's'} imported</b>
+        ${failed.length ? `<div class="ticket-meta" style="color:var(--danger);margin-top:8px;line-height:1.5;">${failed.length} could not be saved (connection or permissions). Upload the file again to retry — assets that have a serial and were already added will be skipped.</div>` : ''}
+      </div><button class="btn-primary" id="imp_done" style="margin-top:0;">Done</button>`;
+    $('imp_done').onclick = close;
+    if (added) done();
+  };
+}
+
+function openAssetEditor(a, locations, done, allAssets){
+  const all = allAssets || [], isChild = isChildAsset(a, all);
+  const existing = isChild ? [] : all.filter(x => x.rootId === a.id);
+  const exData = childrenToExtra(a, existing);
+  const bg = document.createElement('div'); bg.className = 'qr-modal-bg';
+  const cur = {...a, condition: a.condition || 'Good', status: a.status || 'Active'};
+  const types = (!a.type || ASSET_TYPES.includes(a.type)) ? ASSET_TYPES : [a.type, ...ASSET_TYPES];
+  const locs = locations.some(l => l.id === a.locationId) ? locations : [{id: a.locationId, name: a.locationName || a.locationId}, ...locations];
+  const opt = (v, l, c) => `<option value="${escapeHtml(v)}" ${c===v?'selected':''}>${escapeHtml(l)}</option>`;
+  const $ = id => bg.querySelector('#' + id);
+  bg.innerHTML = `<div class="qr-modal edit-modal">
+    <h1 style="font-size:1.1rem;margin:0 0 4px;">Edit asset</h1>
+    ${isChild ? '<div class="ticket-meta">This is part of another asset (it has its own QR code). Its location follows the main asset when that is moved.</div>' : ''}
+    ${isAdmin() ? '' : '<div class="ticket-meta">Location and status can only be changed by an admin.</div>'}
+    <label>Asset name</label><input id="ea_name" type="text" value="${escapeHtml(cur.name||'')}">
+    <label>Type</label><select id="ea_type">${types.map(t => opt(t, t, cur.type)).join('')}</select>
+    <div id="ea_extra"></div>
+    <label>Location</label><select id="ea_loc">${locs.map(l => opt(l.id, l.name, cur.locationId)).join('')}</select>
+    <label>Assigned to</label><input id="ea_person" type="text" value="${escapeHtml(cur.assignedTo||'')}">
+    <label>Serial / asset tag</label><input id="ea_serial" type="text" value="${escapeHtml(cur.serial||'')}">
+    <label>Brand / model</label><input id="ea_model" type="text" value="${escapeHtml(cur.model||'')}">
+    <div class="two" style="gap:12px;">
+      <div><label>Purchase date</label><input id="ea_pdate" type="date" value="${escapeHtml(cur.purchaseDate||'')}"></div>
+      <div><label>Warranty until</label><input id="ea_warr" type="date" value="${escapeHtml(cur.warrantyUntil||'')}"></div>
+    </div>
+    <div class="two" style="gap:12px;">
+      <div><label>Condition</label><select id="ea_cond">${CONDITIONS.map(c => opt(c, c, cur.condition)).join('')}</select></div>
+      <div><label>Status</label><select id="ea_status">${ASSET_STATUSES.map(x => opt(x, x, cur.status)).join('')}</select></div>
+    </div>
+    <label>Notes</label><textarea id="ea_notes" style="min-height:64px;">${escapeHtml(cur.notes||'')}</textarea>
+    <button class="btn-primary" id="ea_save">Save changes</button>
+    <button class="btn-ghost" id="ea_cancel" style="width:100%;margin-top:8px;">Cancel</button>
+    <div id="ea_msg" class="ticket-meta" style="margin-top:10px;"></div>
+  </div>`;
+  document.body.appendChild(bg);
+  if (!isChild) {
+    extraBind($('ea_extra'));
+    const renderEx = () => { $('ea_extra').innerHTML = extraHtml(assetKind($('ea_type').value), exData); };
+    $('ea_type').onchange = renderEx; renderEx();
+  }
+  if (!isAdmin()) { $('ea_loc').disabled = true; $('ea_status').disabled = true; }
+  $('ea_cancel').onclick = () => bg.remove();
+  $('ea_save').onclick = async () => {
+    const msg = $('ea_msg');
+    const loc = locs.find(l => l.id === $('ea_loc').value);
+    const nv = {name: $('ea_name').value.trim(), type: $('ea_type').value, locationId: loc ? loc.id : cur.locationId, assignedTo: $('ea_person').value.trim(),
+      serial: $('ea_serial').value.trim(), model: $('ea_model').value.trim(), purchaseDate: $('ea_pdate').value, warrantyUntil: $('ea_warr').value,
+      condition: $('ea_cond').value, status: $('ea_status').value, notes: $('ea_notes').value.trim()};
+    if (!nv.name) { msg.style.color = 'var(--danger)'; msg.textContent = 'Asset name is required.'; return; }
+    const L = {name:'name', type:'type', locationId:'location', assignedTo:'assigned to', serial:'serial/tag', model:'model', purchaseDate:'purchase date', warrantyUntil:'warranty', condition:'condition', status:'status', notes:'notes', __x:'specs & components'};
+    const ex = isChild ? null : extraCollect($('ea_extra'));
+    const changed = Object.keys(nv).filter(k => (cur[k] || '') !== nv[k]);
+    if (ex && normEx(ex) !== normEx(exData)) changed.push('__x');
+    if (!changed.length) { msg.style.color = 'var(--muted)'; msg.textContent = 'No changes to save.'; return; }
+    const detail = [];
+    if (changed.includes('locationId')) detail.push('Location: ' + (cur.locationName || '—') + ' → ' + (loc ? loc.name : '—'));
+    if (changed.includes('assignedTo')) detail.push('Assigned to: ' + (cur.assignedTo || 'Unassigned') + ' → ' + (nv.assignedTo || 'Unassigned'));
+    if (changed.includes('condition')) detail.push('Condition: ' + cur.condition + ' → ' + nv.condition);
+    if (changed.includes('status')) detail.push('Status: ' + cur.status + ' → ' + nv.status);
+    const upd = {...nv, locationName: loc ? loc.name : cur.locationName,
+      history: [...(a.history || []), {type:'edit', at: Date.now(), by: (SESSION && SESSION.name) || lsGet('it_by') || '', note: detail.join('; '), changes: changed.map(k => L[k])}]};
+    if (ex) upd.specs = ex.specs;
+    const parent = {...a, ...upd};
+    const plan = ex ? planChildren(parent, ex, existing) : null;
+    if (plan && plan.remove.length && !confirm('This removes ' + plan.remove.length + ' accessory / DVR / camera record' + (plan.remove.length === 1 ? '' : 's') + ' and their QR codes. Continue?')) return;
+    $('ea_save').disabled = true; $('ea_save').textContent = 'Saving…';
+    try {
+      await db.doc('assets/' + a.id).update(upd);
+      if (plan) {
+        const cascade = {};
+        if (changed.includes('locationId')) { cascade.locationId = parent.locationId; cascade.locationName = parent.locationName; }
+        if (changed.includes('assignedTo')) cascade.assignedTo = parent.assignedTo;
+        const bad = await writeChildren(parent, plan, (SESSION && SESSION.name) || '', cascade);
+        if (bad) { $('ea_save').disabled = false; $('ea_save').textContent = 'Save changes'; msg.style.color = 'var(--danger)'; msg.textContent = bad + ' accessory record(s) could not be saved — check your connection and Firestore rules, then save again.'; return; }
+      }
+      bg.remove(); done();
+    }
+    catch(e){ $('ea_save').disabled = false; $('ea_save').textContent = 'Save changes'; msg.style.color = 'var(--danger)'; msg.textContent = "Couldn't save — check your connection and Firestore rules."; }
+  };
+}
+
+let assetTypeFilter = 'all', assetStatusFilter = 'all';
+const assetOpen = new Set();
+async function renderAssetsTab(){
+  const body = document.getElementById('tabBody');
+  const [assets, locations] = await Promise.all([fetchAll('assets'), fetchAll('locations')]);
+  locations.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  const types = Array.from(new Set([...ASSET_TYPES, ...assets.map(a => a.type).filter(Boolean)]));
+  const opt = (v, l, cur) => `<option value="${escapeHtml(v)}" ${cur===v?'selected':''}>${escapeHtml(l)}</option>`;
+
+  body.innerHTML = `
+    <details class="card" ${assets.length ? '' : 'open'}>
+      <summary>＋ Add asset</summary>
+      <div style="margin-top:16px;">
+      <label>Asset name</label>
+      <input id="a_name" type="text" placeholder="e.g. Dell OptiPlex 7010">
+      <label>Type</label>
+      <select id="a_type">${ASSET_TYPES.map(t => opt(t, t, '')).join('')}</select>
+      <div id="a_extra"></div>
+      <label>Location</label>
+      <select id="a_loc">${locations.length ? locations.map(l => opt(l.id, l.name, '')).join('') : `<option value="">${isAdmin() ? 'Add a location in Settings first' : 'No location assigned to your account — ask an admin'}</option>`}</select>
+      <label>Serial / asset tag (optional)</label>
+      <input id="a_serial" type="text" placeholder="e.g. SN-00231">
+      <label>Brand / model (optional)</label>
+      <input id="a_model" type="text" placeholder="e.g. Dell OptiPlex 7010">
+      <div class="two" style="gap:12px;">
+        <div><label>Purchase date</label><input id="a_pdate" type="date"></div>
+        <div><label>Warranty until</label><input id="a_warr" type="date"></div>
+      </div>
+      <label>Notes (optional)</label>
+      <textarea id="a_notes" style="min-height:64px;" placeholder="IP address, accessories, remarks…"></textarea>
+      <label>Status</label>
+      <select id="a_status">${ASSET_STATUSES.map(x => opt(x, x, '')).join('')}</select>
+      <label>Assigned to (optional)</label>
+      <input id="a_person" type="text" placeholder="e.g. Nadeesha Perera">
+      <label>Condition</label>
+      <select id="a_cond">${CONDITIONS.map(c => opt(c, c, 'Good')).join('')}</select>
+      <button class="btn-primary" id="addAssetBtn">Add Asset &amp; generate QR</button>
+      <div id="a_msg" class="ticket-meta" style="margin-top:10px;"></div>
+      </div>
+    </details>
+    <div class="row" style="margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <select id="fLoc" style="width:auto;"><option value="all">All locations</option>${locations.map(l => opt(l.id, l.name, assetLocFilter)).join('')}</select>
+      <select id="fType" style="width:auto;"><option value="all">All types</option>${types.map(t => opt(t, t, assetTypeFilter)).join('')}</select>
+      <select id="fStatus" style="width:auto;"><option value="all">All statuses</option>${ASSET_STATUSES.map(x => opt(x, x, assetStatusFilter)).join('')}</select>
+      <span class="ticket-meta" id="assetCount" style="margin-left:auto;"></span>
+      <button class="btn-ghost" id="assetImport" title="Add many assets from a filled Excel sheet">⬆ Import Excel</button>
+      <button class="btn-ghost" id="assetTpl" title="Blank sheet in the import format">⬇ Template</button>
+      <button class="btn-ghost" id="assetXlsx">⬇ Excel report</button>
+      <input type="file" id="assetFile" accept=".xlsx,.xls,.csv" hidden>
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto;"><table class="tbl">
+      <thead><tr><th>Asset</th><th>Type</th><th>Location</th><th>Assigned to</th><th>Serial / tag</th><th>Condition</th><th>Status</th><th></th></tr></thead>
+      <tbody id="assetRows"></tbody>
+    </table></div>
+  `;
+  const bindF = (id, set) => { const el = document.getElementById(id); el.onchange = e => { set(e.target.value); renderAssetsTab(); }; };
+  bindF('fLoc', v => assetLocFilter = v); bindF('fType', v => assetTypeFilter = v); bindF('fStatus', v => assetStatusFilter = v);
+
+  const exBox = document.getElementById('a_extra'), typeSel = document.getElementById('a_type');
+  extraBind(exBox);
+  const renderEx = () => { exBox.innerHTML = extraHtml(assetKind(typeSel.value), null); };
+  typeSel.onchange = renderEx; renderEx();
+  const addBtn = document.getElementById('addAssetBtn');
+  const addLabel = addBtn.innerHTML;
+  addBtn.onclick = async () => {
+    const msg = document.getElementById('a_msg');
+    const err = t => { msg.style.color = 'var(--danger)'; msg.textContent = t; };
+    msg.textContent = '';
+    const name = document.getElementById('a_name').value.trim();
+    if (!name) return err('Asset name is required.');
+    // `locations` is already limited to the signed-in user's own locations
+    const loc = locations.find(l => l.id === document.getElementById('a_loc').value);
+    if (!loc) return err(isAdmin() ? 'Add a location first.' : 'No location is assigned to your account — ask an admin.');
+    const id = 'asset_' + Date.now().toString(36);
+    const person = document.getElementById('a_person').value.trim();
+    const by = isAdmin() ? '' : (SESSION.name || '');
+    addBtn.disabled = true; addBtn.textContent = 'Saving…';
+    let doc, plan, bad = 0;
+    try {
+      doc = {
+        id, name, type: document.getElementById('a_type').value,
+        locationId: loc.id, locationName: loc.name,
+        serial: document.getElementById('a_serial').value.trim(),
+        model: document.getElementById('a_model').value.trim(), purchaseDate: document.getElementById('a_pdate').value,
+        warrantyUntil: document.getElementById('a_warr').value, notes: document.getElementById('a_notes').value.trim(),
+        status: document.getElementById('a_status').value, createdAt: Date.now(),
+        condition: document.getElementById('a_cond').value, assignedTo: person,
+        history: [{type:'created', at: Date.now(), by, note: '', person}]
+      };
+      const ex = extraCollect(exBox); doc.specs = ex.specs;
+      await db.doc('assets/' + id).set(doc);
+      plan = planChildren(doc, ex, []);
+      if (plan.items.length) bad = await writeChildren(doc, plan, by);
+    } catch(e){
+      addBtn.disabled = false; addBtn.innerHTML = addLabel;
+      return err("Couldn't save — check your connection and try again.");
+    }
+    await renderAssetsTab();
+    if (bad) alert(bad + ' accessory record(s) could not be saved. Open the asset and press Edit → Save to retry.');
+    if (plan.items.length) showQrSheet([doc, ...plan.items].map(x => ({url: assetUrl(x.id), title: x.name, sub: x.id === id ? loc.name : x.type, short: x.id === id ? x.name : (x.label || x.type), line2: x.id === id ? loc.name : name})), name + ' — QR labels');
+    else showQr(assetUrl(id), name, loc.name);
+  };
+
+  const fileIn = document.getElementById('assetFile');
+  document.getElementById('assetImport').onclick = () => fileIn.click();
+  fileIn.onchange = () => { const f = fileIn.files[0]; fileIn.value = ''; if (f) openAssetImport(f, assets, locations, renderAssetsTab); };
+  document.getElementById('assetTpl').onclick = async e => { const b = e.currentTarget; b.disabled = true; try { await downloadAssetTemplate(locations); } finally { b.disabled = false; } };
+
+  const hasFilter = assetLocFilter !== 'all' || assetTypeFilter !== 'all' || assetStatusFilter !== 'all';
+  const match = x => (assetLocFilter === 'all' || x.locationId === assetLocFilter) && (assetTypeFilter === 'all' || x.type === assetTypeFilter) && (assetStatusFilter === 'all' || x.status === assetStatusFilter);
+  const tops = assets.filter(x => !isChildAsset(x, assets));
+  const kidsMap = new Map(tops.map(t => [t.id, descendantsOf(assets, t.id)]));
+  const shown = [];
+  tops.slice().sort((x,y) => (x.name||'').localeCompare(y.name||'')).forEach(t => {
+    const kids = kidsMap.get(t.id) || [];
+    const vis = hasFilter ? kids.filter(r => match(r.k)).map(r => ({k: r.k, d: 0})) : kids;
+    if (match(t) || vis.length) shown.push({t, kids, vis});
+  });
+  const nKids = assets.length - tops.length;
+  document.getElementById('assetCount').textContent = shown.length + ' of ' + tops.length + ' asset' + (tops.length === 1 ? '' : 's') + (nKids ? ' · ' + nKids + ' accessories / cameras' : '');
+  document.getElementById('assetXlsx').onclick = async e => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Preparing…'; try { await exportAssetsXlsx(shown.map(x => x.t), assets); } finally { b.disabled = false; b.textContent = '⬇ Excel report'; } };
+  const stCls = x => x === 'Active' ? 'badge-resolved' : (x === 'In Repair' ? 'badge-in-progress' : 'badge-open');
+  const statusCell = a => isAdmin() ? `<select class="status-select" data-id="${a.id}" style="margin:0;padding:5px 8px;">${ASSET_STATUSES.map(x => `<option value="${x}" ${a.status===x?'selected':''}>${x}</option>`).join('')}</select>` : `<span class="badge ${stCls(a.status||'Active')}">${escapeHtml(a.status||'Active')}</span>`;
+  const btns = (a, extra) => `<td style="text-align:right;white-space:nowrap;">${extra || ''}<button class="btn-ghost edit-btn" data-id="${a.id}" style="padding:6px 11px;font-size:.78rem;">Edit</button>
+        <button class="btn-ghost qr-btn" data-id="${a.id}" style="padding:6px 11px;font-size:.78rem;">QR</button>
+        ${isAdmin() ? `<a class="btn-ghost" href="${escapeHtml(assetUrl(a.id))}" target="_blank" style="padding:6px 11px;font-size:.78rem;">Open</a>` : ''}</td>`;
+  const parentRow = ({t, kids, vis}) => {
+    const open = hasFilter ? vis.length > 0 : assetOpen.has(t.id);
+    return `<tr>
+      <td>${kids.length ? `<button class="link-btn tg" data-id="${t.id}" style="margin-right:6px;">${open ? '▾' : '▸'}</button>` : ''}<b>${escapeHtml(t.name)}</b>${t.model ? `<div class="ticket-meta" style="margin:2px 0 0;">${escapeHtml(t.model)}</div>` : ''}${extraSummary(t, kids.map(r => r.k))}</td>
+      <td>${escapeHtml(t.type||'—')}</td><td>${escapeHtml(t.locationName||t.locationId||'—')}</td><td>${escapeHtml(t.assignedTo||'—')}</td><td>${escapeHtml(t.serial||'—')}</td>
+      <td><span class="badge ${condBadge(t.condition||'Good')}">${escapeHtml(t.condition||'Good')}</span></td><td>${statusCell(t)}</td>
+      ${btns(t, kids.length ? `<button class="btn-ghost qrset-btn" data-id="${t.id}" style="padding:6px 11px;font-size:.78rem;" title="Print every QR of this asset">QR set</button> ` : '')}</tr>${open ? vis.map(r => childRow(r)).join('') : ''}`;
+  };
+  const childRow = ({k, d}) => `<tr style="background:var(--field);">
+      <td style="padding-left:${22 + d * 18}px;">↳ <b>${escapeHtml(k.label || k.name)}</b><div class="ticket-meta" style="margin:2px 0 0;">${[k.model, k.floor ? 'Floor: ' + k.floor : '', k.type === 'DVR' ? (k.cameraCount || 0) + ' cameras' : ''].filter(Boolean).map(escapeHtml).join(' · ')}</div></td>
+      <td>${escapeHtml(k.type||'—')}</td><td>${escapeHtml(k.locationName||'—')}</td><td>${escapeHtml(k.assignedTo||'—')}</td><td>${escapeHtml(k.serial||'—')}</td>
+      <td><span class="badge ${condBadge(k.condition||'Good')}">${escapeHtml(k.condition||'Good')}</span></td><td>${statusCell(k)}</td>${btns(k)}</tr>`;
+  const tb = document.getElementById('assetRows');
+  tb.innerHTML = shown.length ? shown.map(parentRow).join('') : `<tr><td colspan="8" class="ticket-meta" style="text-align:center;padding:30px;">${assets.length ? 'No assets match these filters.' : 'No assets recorded yet.'}</td></tr>`;
+  tb.querySelectorAll('.tg').forEach(b => b.onclick = () => { assetOpen.has(b.dataset.id) ? assetOpen.delete(b.dataset.id) : assetOpen.add(b.dataset.id); renderAssetsTab(); });
+  tb.querySelectorAll('.qr-btn').forEach(b => b.onclick = () => {
+    const a = assets.find(x => x.id === b.dataset.id);
+    showQr(assetUrl(a.id), a.name, (a.type || '') + ' · ' + (a.serial || a.id));
+  });
+  tb.querySelectorAll('.qrset-btn').forEach(b => b.onclick = () => {
+    const a = assets.find(x => x.id === b.dataset.id), list = [a, ...descendantsOf(assets, a.id).map(r => r.k)];
+    showQrSheet(list.map(x => ({url: assetUrl(x.id), title: x.name, sub: x.id === a.id ? (x.locationName || '') : x.type, short: x.id === a.id ? x.name : (x.label || x.type), line2: x.id === a.id ? (x.locationName || '') : a.name})), a.name + ' — QR labels');
+  });
+  tb.querySelectorAll('.edit-btn').forEach(b => b.onclick = () => openAssetEditor(assets.find(x => x.id === b.dataset.id), locations, renderAssetsTab, assets));
+  tb.querySelectorAll('.status-select').forEach(sel => sel.onchange = async () => {
+    sel.disabled = true;
+    try { await db.doc('assets/' + sel.dataset.id).update({status: sel.value}); }
+    finally { renderAssetsTab(); }
+  });
+}
+
+async function renderLocationsTab(){
+  const body = document.getElementById('tabBody');
+  const [locations, tickets] = await Promise.all([fetchAll('locations'), fetchAll('tickets')]);
+  locations.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  const counts = {};
+  tickets.forEach(t => { counts[t.locationId] = (counts[t.locationId]||0) + 1; });
+
+  body.innerHTML = `
+    <div class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div>
+          <div class="loc-name">Ticket form QR code</div>
+          <div class="loc-count">One QR code for the form — people pick their location inside it.</div>
+        </div>
+        <button class="btn-ghost" id="showGeneralQr">Show QR</button>
+      </div>
+    </div>
+    <div class="card">
+      <label>Add a location</label>
+      <div class="add-row">
+        <input id="newLocName" type="text" placeholder="e.g. Colombo Store">
+        <button class="btn-primary" style="width:auto;margin-top:0;" id="addLocBtn">Add</button>
+      </div>
+    </div>
+    <div class="card">
+      ${locations.length ? locations.map(l => `
+        <div class="loc-item">
+          <div>
+            <div class="loc-name">${escapeHtml(l.name)}</div>
+            <div class="loc-count">${counts[l.id]||0} ticket${(counts[l.id]||0)===1?'':'s'}</div>
+          </div>
+        </div>
+      `).join('') : '<div class="empty">No locations yet — add one above.</div>'}
+    </div>
+  `;
+  document.getElementById('addLocBtn').onclick = async () => {
+    const val = document.getElementById('newLocName').value.trim();
+    if (!val) return;
+    const id = 'loc_' + Date.now().toString(36);
+    await db.doc('locations/' + id).set({id, name: val, createdAt: Date.now()});
+    renderLocationsTab();
+  };
+  document.getElementById('showGeneralQr').onclick = () => showQr();
+}
+
+function showQr(url = formUrl(), title = 'IT Issue Report Form', sub = ''){
+  const bg = document.createElement('div');
+  bg.className = 'qr-modal-bg';
+  bg.innerHTML = `
+    <div class="qr-modal">
+      <h1 style="font-size:1.1rem;">${escapeHtml(title)}</h1>
+      ${sub ? `<div class="ticket-meta" style="margin:-4px 0 12px;">${escapeHtml(sub)}</div>` : ''}
+      <div id="qrCanvas"></div>
+      <div class="url">${escapeHtml(url)}</div>
+      <button class="link-btn" id="copyUrl">Copy link</button>
+      <br><br>
+      <button class="btn-ghost" id="printQr">Print label (30.2 × 20 mm)</button> <button class="btn-ghost" id="closeModal">Close</button>
+    </div>
+  `;
+  document.body.appendChild(bg);
+  const qrTarget = document.getElementById('qrCanvas');
+  if (window.QRCode) {
+    try {
+      new QRCode(qrTarget, {text: url, width: 220, height: 220, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M});
+    } catch(e) {
+      qrTarget.innerHTML = '<div style="color:var(--danger);font-size:.8rem;">Could not render QR code. Use the link below instead.</div>';
+    }
+  } else {
+    qrTarget.innerHTML = '<div style="color:var(--danger);font-size:.8rem;">QR library failed to load. Use the link below instead.</div>';
+  }
+  document.getElementById('printQr').onclick = () => printLabels([{url, short: title, line2: sub}], +(lsGet('it_label_gap') || 2));
+  document.getElementById('closeModal').onclick = () => bg.remove();
+  bg.onclick = (e) => { if (e.target === bg) bg.remove(); };
+  document.getElementById('copyUrl').onclick = () => {
+    navigator.clipboard.writeText(url).then(()=>{ document.getElementById('copyUrl').textContent = 'Copied!'; });
+  };
+}
+
+// ---------- LABEL PRINTING: 30.2 mm x 20 mm stickers, 3 across ----------
+const LABEL = {w: 30.2, h: 20, cols: 3};
+function qrPng(url){   // large, low-density QR so it stays sharp on a small thermal label
+  const d = document.createElement('div');
+  try { new QRCode(d, {text: url, width: 360, height: 360, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.L}); } catch(e){ return ''; }
+  const c = d.querySelector('canvas'), im = d.querySelector('img');
+  return c ? c.toDataURL() : (im ? im.src : '');
+}
+// items: [{url, short, line2}] -> opens a print window, one row of 3 labels per 'page' (page = 3 x 30.2 mm wide, 20 mm tall)
+function printLabels(items, gap){
+  gap = Math.max(0, +gap || 0);
+  const W = +(LABEL.w * LABEL.cols + gap * (LABEL.cols - 1)).toFixed(2);
+  const cell = it => `<div class="l"><img src="${qrPng(it.url)}"><div class="t"><b>${escapeHtml(it.short || it.title || '')}</b><span>${escapeHtml(it.line2 || it.sub || '')}</span></div></div>`;
+  let rows = '';
+  for (let i = 0; i < items.length; i += LABEL.cols) rows += `<div class="r">${items.slice(i, i + LABEL.cols).map(cell).join('')}</div>`;
+  const w = window.open('', '_blank'); if (!w) { alert('Allow pop-ups to print the labels.'); return; }
+  w.document.write(`<title>QR labels</title><style>
+    @page{size:${W}mm ${LABEL.h}mm;margin:0}
+    *{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#000}
+    .r{display:flex;gap:${gap}mm;width:${W}mm;height:${LABEL.h}mm;page-break-after:always;break-after:page;overflow:hidden}
+    .r:last-child{page-break-after:auto;break-after:auto}
+    .l{width:${LABEL.w}mm;height:${LABEL.h}mm;flex:none;display:flex;align-items:center;gap:1mm;padding:1.4mm;overflow:hidden}
+    .l img{width:15.8mm;height:15.8mm;flex:none;image-rendering:pixelated}
+    .t{display:flex;flex-direction:column;min-width:0;line-height:1.12}
+    .t b{font-size:5.5pt;word-break:break-word;max-height:11mm;overflow:hidden}
+    .t span{font-size:4.5pt;margin-top:.6mm;word-break:break-word;max-height:6mm;overflow:hidden}
+    @media screen{body{padding:8px;background:#ddd}.r{margin-bottom:6px;background:#fff}}
+  </style>${rows}<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script>`);
+  w.document.close();
+}
+
+// a printable sheet with one QR label per item (an asset plus its accessories / DVRs / cameras)
+function showQrSheet(items, heading){
+  const bg = document.createElement('div'); bg.className = 'qr-modal-bg';
+  bg.innerHTML = `<div class="qr-modal edit-modal" style="max-width:640px;">
+    <h1 style="font-size:1.1rem;margin:0 0 4px;">${escapeHtml(heading || 'QR labels')}</h1>
+    <div class="ticket-meta" style="margin:0 0 12px;">${items.length} QR code${items.length === 1 ? '' : 's'} — each item has its own label</div>
+    <div id="qrGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px;">${items.map((it, i) => `<div class="qrcell" style="background:var(--field);border-radius:var(--radius-sm);padding:10px;text-align:center;">
+      <div class="qrc" data-i="${i}" style="display:flex;justify-content:center;"></div>
+      <div style="font-weight:700;font-size:.78rem;margin-top:6px;line-height:1.25;">${escapeHtml(it.title)}</div>
+      <div class="ticket-meta" style="margin:2px 0 0;font-size:.7rem;">${escapeHtml(it.sub || '')}</div></div>`).join('')}</div>
+    <div class="row" style="gap:10px;align-items:center;margin-bottom:10px;"><label style="margin:0;white-space:nowrap;">Gap between labels (mm)</label><input id="qsGap" type="number" min="0" max="10" step="0.1" value="${escapeHtml(lsGet('it_label_gap') || '2')}" style="max-width:90px;"></div>
+    <div class="ticket-meta" style="margin:0 0 10px;">Prints on 30.2 × 20 mm stickers, 3 across. In the print dialog set margins to None and scale to 100%.</div>
+    <button class="btn-primary" id="qsPrint">Print all labels</button>
+    <button class="btn-ghost" id="qsClose" style="width:100%;margin-top:8px;">Close</button></div>`;
+  document.body.appendChild(bg);
+  bg.querySelectorAll('.qrc').forEach(el => { const it = items[+el.dataset.i];
+    try { new QRCode(el, {text: it.url, width: 120, height: 120, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M}); } catch(e) { el.textContent = 'QR unavailable'; } });
+  bg.querySelector('#qsClose').onclick = () => bg.remove();
+  bg.onclick = e => { if (e.target === bg) bg.remove(); };
+  bg.querySelector('#qsPrint').onclick = () => { const g = bg.querySelector('#qsGap').value; lsSet('it_label_gap', g); printLabels(items, +g); };
+}
+
+// ---------- STOCK TAKE (annual asset verification by QR scan) ----------
+let STOCK = {enabled:false, title:'', startDate:'', endDate:'', takeId:''};
+const fmtDate = s => s ? new Date(s + 'T00:00:00').toLocaleDateString(undefined, {day:'numeric', month:'short', year:'numeric'}) : '';
+function stockOpen(){ const t = todayStr(); return !!(STOCK.enabled && STOCK.startDate && t >= STOCK.startDate && t <= (STOCK.endDate || STOCK.startDate)); }
+async function loadStock(){
+  try { const r = await db.doc('settings/stocktake').get(); STOCK = Object.assign({enabled:false, title:'', startDate:'', endDate:'', takeId:''}, (r && r.data) || {}); } catch(e){}
+}
+function stockBanner(){
+  if (!STOCK.enabled || !STOCK.startDate) return '';
+  const end = STOCK.endDate || STOCK.startDate, t = todayStr();
+  if (t > end) return '';
+  const when = fmtDate(STOCK.startDate) + (end !== STOCK.startDate ? ' – ' + fmtDate(end) : '');
+  return `<div class="banner">${stockOpen() ? `📋 ${escapeHtml(STOCK.title || 'Stock take')} is open now (${when}). Open the Stock take tab to scan your assets.` : `📋 ${escapeHtml(STOCK.title || 'Annual stock take')} is scheduled for ${when}.`}</div>`;
+}
+
+let scanStream = null, scanRaf = 0, scanBusy = false, scanKeyHandler = null;
+function stopCamera(){ cancelAnimationFrame(scanRaf); scanBusy = false; if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; } }
+function stopScan(){ stopCamera(); if (scanKeyHandler) { document.removeEventListener('keydown', scanKeyHandler, true); scanKeyHandler = null; } }
+// Reads QR codes AND 1-D/2-D barcodes (Code 128/39, EAN, UPC, ITF, Codabar, Data Matrix).
+// Uses the browser's BarcodeDetector when present, otherwise jsQR + ZXing as a fallback (iPhone/Safari, Firefox).
+async function startScan(video, onCode){
+  if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) throw new Error('Camera access needs a secure (HTTPS) page and a supported browser.');
+  stopCamera();
+  const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}}, audio:false});
+  if (!video.isConnected) { stream.getTracks().forEach(t => t.stop()); return false; }
+  scanStream = stream;
+  video.srcObject = stream; video.setAttribute('playsinline', ''); await video.play();
+  let det = null, zx = null;
+  if ('BarcodeDetector' in window) {
+    try {
+      const want = ['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','itf','codabar','data_matrix'];
+      const sup = BarcodeDetector.getSupportedFormats ? await BarcodeDetector.getSupportedFormats() : want;
+      const fm = want.filter(f => sup.includes(f));
+      if (fm.length) det = new BarcodeDetector({formats:fm});
+    } catch(e){}
+  }
+  if (!det) {
+    if (!window.jsQR) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js');
+    if (!window.ZXing) await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js');
+    if (window.ZXing) {
+      try {
+        const Z = window.ZXing, hints = new Map(), F = Z.BarcodeFormat;
+        hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [F.QR_CODE, F.CODE_128, F.CODE_39, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.ITF, F.CODABAR, F.DATA_MATRIX]);
+        hints.set(Z.DecodeHintType.TRY_HARDER, true);
+        zx = new Z.MultiFormatReader(); zx.setHints(hints);
+      } catch(e){}
+    }
+  }
+  const cv = document.createElement('canvas'), cx = cv.getContext('2d', {willReadFrequently:true});
+  let last = 0;
+  const tick = async ts => {
+    if (!video.isConnected || !scanStream) { stopCamera(); return; }
+    scanRaf = requestAnimationFrame(tick);
+    if (scanBusy || ts - last < 180 || video.readyState < 2) return;
+    last = ts; scanBusy = true;
+    try {
+      let text = '';
+      if (det) { const r = await det.detect(video); if (r.length) text = r[0].rawValue; }
+      else if (video.videoWidth) {
+        const k = Math.min(1, 960 / video.videoWidth);
+        cv.width = Math.round(video.videoWidth * k); cv.height = Math.round(video.videoHeight * k);
+        cx.drawImage(video, 0, 0, cv.width, cv.height);
+        if (window.jsQR) { const c = jsQR(cx.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height); if (c) text = c.data; }
+        if (!text && zx) {
+          try { const Z = window.ZXing; text = zx.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(cv)))).getText(); }
+          catch(e){ /* nothing readable in this frame */ }
+        }
+      }
+      if (text) onCode(text);
+    } catch(e){}
+    scanBusy = false;
+  };
+  scanRaf = requestAnimationFrame(tick);
+  return true;
+}
+
+async function renderStockTab(){
+  const body = document.getElementById('tabBody');
+  const $ = x => document.getElementById(x);
+  const admin = isAdmin(), open = stockOpen();
+  const [assets, locations, allScans] = await Promise.all([fetchAll('assets'), fetchAll('locations'), STOCK.takeId ? fetchAll('stockscans') : []]);
+  locations.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  assets.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  const scans = {}; allScans.filter(s => s.takeId === STOCK.takeId).forEach(s => scans[s.assetId] = s);
+  let fLoc = 'all', fStat = 'all', current = null, hold = false;
+
+  const end = STOCK.endDate || STOCK.startDate;
+  const statusText = !STOCK.enabled || !STOCK.startDate ? 'No stock take is announced.' :
+    open ? 'Open now — users can scan until ' + fmtDate(end) + '.' :
+    todayStr() < STOCK.startDate ? 'Announced. Opens on ' + fmtDate(STOCK.startDate) + '.' : 'Closed. Ended on ' + fmtDate(end) + '.';
+  const link = pageBaseUrl() + '?view=stock';
+
+  body.innerHTML = `
+    ${admin ? `<div class="card"><h2 class="ct">Stock take schedule</h2>
+      <div class="ticket-meta" style="margin:-8px 0 14px;">${statusText} The Stock take tab is visible to location users only between these dates.</div>
+      <div class="fgrid">
+        <div class="full"><label>Title</label><input id="sk_title" type="text" placeholder="Annual stock take ${new Date().getFullYear()}" value="${escapeHtml(STOCK.title||'')}"></div>
+        <div><label>Start date</label><input id="sk_start" type="date" value="${escapeHtml(STOCK.startDate||'')}"></div>
+        <div><label>End date (optional)</label><input id="sk_end" type="date" value="${escapeHtml(STOCK.endDate||'')}"></div>
+      </div>
+      <div class="row" style="margin-top:18px;flex-wrap:wrap;"><button class="btn-ghost" id="sk_save" style="background:var(--accent);color:var(--accent-fg);">Announce &amp; activate</button>
+        ${STOCK.enabled ? '<button class="btn-ghost" id="sk_off">Cancel stock take</button>' : ''}<span id="sk_msg" class="ticket-meta"></span></div>
+      <div class="copy-row" style="margin-top:16px;"><input readonly value="${escapeHtml(link)}" onclick="this.select()"></div>
+    </div>` : ''}
+    ${STOCK.takeId ? '<div class="stats" id="stStats"></div>' : ''}
+    ${(open || !admin) ? `<div class="two">
+      <div class="card"><h2 class="ct">Scan barcode / QR code</h2>
+        <div class="cam"><video id="stVideo" muted></video><div class="cam-frame"></div><div class="cam-hint" id="stHint">Camera is off</div></div>
+        <div class="row" style="margin-top:14px;"><button class="btn-primary grow" id="stCam" style="margin:0;">Start camera</button></div>
+        <label style="display:flex;align-items:center;gap:10px;margin-top:14px;cursor:pointer;"><input type="checkbox" id="stAuto" style="width:auto;margin:0;"><span>Mark available automatically when scanned</span></label>
+        <label>Handheld scanner, or type the asset ID / serial / tag</label>
+        <div class="add-row"><input id="stManual" type="text" placeholder="Scan or type, then Enter" autocomplete="off"><button class="btn-ghost" id="stFind">Find</button></div>
+      </div>
+      <div class="card"><h2 class="ct">Asset</h2><div id="stResult"><div class="empty">Scan an asset barcode or QR code to confirm it is available.</div></div></div>
+    </div>` : `<div class="empty">Scanning is available only on the announced stock take dates.</div>`}
+    ${STOCK.takeId ? `<div class="card"><div class="row" style="flex-wrap:wrap;margin-bottom:12px;">
+        <h2 class="ct grow" style="margin:0;">Assets</h2>
+        <select id="stLoc" style="width:auto;"><option value="all">All locations</option>${locations.map(l => `<option value="${l.id}">${escapeHtml(l.name)}</option>`).join('')}</select>
+        <select id="stStat" style="width:auto;"><option value="all">All</option><option value="ok">Available</option><option value="todo">Not scanned</option></select>
+        ${admin ? '<button class="btn-ghost" id="stCsv">Export CSV</button>' : ''}</div>
+      <div id="stList"></div></div>` : ''}`;
+
+  const inScope = () => assets.filter(a => fLoc === 'all' || a.locationId === fLoc);
+  const drawProgress = () => {
+    if (!STOCK.takeId) return;
+    const all = assets, done = all.filter(a => scans[a.id]).length, pct = all.length ? Math.round(done / all.length * 100) : 0;
+    $('stStats').innerHTML = `<div class="stat"><b>${all.length}</b><span>Assets to check</span></div><div class="stat"><b style="color:var(--ok)">${done}</b><span>Available</span></div>
+      <div class="stat"><b style="color:var(--warn)">${all.length - done}</b><span>Not scanned yet</span></div><div class="stat"><b>${pct}%</b><span>Complete<span style="display:block;margin-top:8px;"><span class="bar" style="display:block;"><i style="width:${pct}%"></i></span></span></span></div>`;
+    let rows = inScope();
+    if (fStat === 'ok') rows = rows.filter(a => scans[a.id]); else if (fStat === 'todo') rows = rows.filter(a => !scans[a.id]);
+    $('stList').innerHTML = rows.length ? rows.slice(0, 400).map(a => { const s = scans[a.id]; return `<div class="loc-item"><div><div class="loc-name">${escapeHtml(a.name)}</div>
+      <div class="loc-count">${escapeHtml([a.type, a.serial, a.locationName].filter(Boolean).join(' · '))}</div></div>
+      ${s ? `<div style="text-align:right;"><span class="badge badge-resolved">Available</span><div class="loc-count">${escapeHtml(s.by||'')} · ${timeAgo(s.at)}</div></div>` : '<span class="badge badge-in-progress">Not scanned</span>'}</div>`; }).join('')
+      : '<div class="empty">No assets match this filter.</div>';
+  };
+  drawProgress();
+  if ($('stLoc')) { $('stLoc').onchange = e => { fLoc = e.target.value; drawProgress(); }; $('stStat').onchange = e => { fStat = e.target.value; drawProgress(); }; }
+  if ($('stCsv')) $('stCsv').onclick = () => exportCsv('stock_take_' + (STOCK.startDate || 'results'), ['asset','type','serial','location','assignedTo','status','condition','verifiedBy','verifiedAt'],
+    inScope().map(a => { const s = scans[a.id]; return {asset:a.name, type:a.type||'', serial:a.serial||'', location:a.locationName||'', assignedTo:a.assignedTo||'', status:s ? 'Available' : 'Not scanned', condition:s ? s.condition : '', verifiedBy:s ? s.by : '', verifiedAt:s ? new Date(s.at).toLocaleString() : ''}; }));
+
+  if (admin) {
+    $('sk_save').onclick = async () => {
+      const startDate = $('sk_start').value, endDate = $('sk_end').value, msg = $('sk_msg');
+      if (!startDate) { msg.style.color = 'var(--danger)'; msg.textContent = 'Choose a start date.'; return; }
+      if (endDate && endDate < startDate) { msg.style.color = 'var(--danger)'; msg.textContent = 'End date is before the start date.'; return; }
+      try {
+        await db.doc('settings/stocktake').set({enabled:true, title:$('sk_title').value.trim(), startDate, endDate, takeId:'st_' + startDate, announcedAt:Date.now()});
+        await loadStock(); renderAdmin();
+      } catch(e){ msg.style.color = 'var(--danger)'; msg.textContent = "Couldn't save — check your connection."; }
+    };
+    if ($('sk_off')) $('sk_off').onclick = async () => { try { await db.doc('settings/stocktake').set({enabled:false}); await loadStock(); renderAdmin(); } catch(e){} };
+  }
+  if (!$('stVideo')) return;
+
+  const show = html => { $('stResult').innerHTML = html; };
+  const idFromCode = text => { text = String(text).trim(); try { const u = new URL(text); return u.searchParams.get('id') || text; } catch(e){ return text; } };
+  const findAsset = code => { const id = idFromCode(code), low = id.toLowerCase(); return assets.find(a => a.id === id) || assets.find(a => a.serial && String(a.serial).toLowerCase() === low); };
+  const IDLE = '<div class="empty">Scan an asset barcode or QR code to confirm it is available.</div>';
+  let actx = null;
+  const beep = ok => { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = ok ? 880 : 220; g.gain.value = .08; o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + (ok ? .12 : .28)); } catch(e){} };
+  let autoOn = true; try { autoOn = localStorage.getItem('stAutoMark') !== '0'; } catch(e){}
+  $('stAuto').checked = autoOn;
+  $('stAuto').onchange = e => { autoOn = e.target.checked; try { localStorage.setItem('stAutoMark', autoOn ? '1' : '0'); } catch(_){} };
+  const refocus = () => { if (window.matchMedia && matchMedia('(pointer:fine)').matches && $('stManual')) $('stManual').focus(); };
+  const record = async (a, condition) => {
+    const rec = {id:STOCK.takeId + '_' + a.id, takeId:STOCK.takeId, assetId:a.id, assetName:a.name, assetType:a.type||'', serial:a.serial||'', locationId:a.locationId||'', locationName:a.locationName||'',
+      status:'available', condition, by:SESSION.name || 'Admin', at:Date.now()};
+    await db.doc('stockscans/' + rec.id).set(rec); scans[a.id] = rec; try { drawProgress(); } catch(_){} return rec;
+  };
+  const why = e => { const c = (e && (e.code || e.name)) || '', m = (e && e.message) || '';
+    if (/permission/i.test(c + m)) return 'Permission denied by Firestore rules for the "stockscans" collection.';
+    if (/unavailable|network|offline/i.test(c + m)) return 'No connection to the database (' + (c || m) + ').';
+    return (c ? c + ': ' : '') + m.slice(0, 140) || 'Unknown error.'; };
+  const info = a => `<div style="font-size:1.25rem;font-weight:600;">${escapeHtml(a.name)}</div>
+      <div class="ticket-meta">${escapeHtml([a.type, a.model, a.serial].filter(Boolean).join(' · '))}</div>
+      <div class="ticket-meta">${escapeHtml(a.locationName || '—')}${a.assignedTo ? ' · ' + escapeHtml(a.assignedTo) : ''}</div>`;
+  const autoMark = async (a, s) => {
+    if (s) { beep(true); show(`${info(a)}<div class="ticket-meta" style="color:var(--ok);font-weight:600;">Already confirmed by ${escapeHtml(s.by||'')} ${timeAgo(s.at)}</div>`); return; }
+    hold = true; show(`${info(a)}<div class="ticket-meta">Saving…</div>`);
+    try { await record(a, a.condition || 'Good'); beep(true); show(`<div class="empty" style="color:var(--ok);font-weight:600;">✓ Marked available</div>${info(a)}`); }
+    catch(e){ console.error('stock scan save failed', e); beep(false); show(`${info(a)}<div class="ticket-meta" style="color:var(--danger);">Couldn't save — ${escapeHtml(why(e))}</div>`); lastCode = ''; }
+    hold = false;
+  };
+  let lastCode = '', lastAt = 0;
+  const handle = code => {
+    code = String(code).trim(); if (!code) return;
+    const now = Date.now(); if (code === lastCode && now - lastAt < 2500) { lastAt = now; return; }   // same code still in view
+    lastCode = code; lastAt = now;
+    if (hold) return; const a = findAsset(code);
+    if (!a) { beep(false); show(`<div class="empty" style="color:var(--danger)">That code isn't an asset in ${admin ? 'the system' : 'your locations'}.<div class="ticket-meta">${escapeHtml(code.slice(0, 80))}</div></div>`); return; }
+    if (navigator.vibrate) navigator.vibrate(60);
+    const s = scans[a.id];
+    if (autoOn) { autoMark(a, s); return; }
+    hold = true; current = a;
+    show(`${info(a)}
+      ${s ? `<div class="ticket-meta" style="color:var(--ok);font-weight:600;">Already confirmed by ${escapeHtml(s.by||'')} ${timeAgo(s.at)}</div>` : ''}
+      <label>Condition</label><select id="st_cond">${CONDITIONS.map(c => `<option ${c === (s ? s.condition : a.condition || 'Good') ? 'selected' : ''}>${c}</option>`).join('')}</select>
+      <button class="btn-primary" id="st_ok">Mark available</button>
+      <button class="btn-ghost" id="st_no" style="width:100%;margin-top:10px;">Cancel</button><div id="st_msg" class="ticket-meta"></div>`);
+    $('st_no').onclick = () => { hold = false; current = null; lastCode = ''; show(IDLE); };
+    $('st_ok').onclick = async () => {
+      $('st_ok').disabled = true; $('st_ok').textContent = 'Saving…';
+      try { await record(a, $('st_cond').value); hold = false; current = null; beep(true);
+        show(`<div class="empty" style="color:var(--ok);font-weight:600;">✓ ${escapeHtml(a.name)} marked available</div>`); }
+      catch(e){ $('st_ok').disabled = false; $('st_ok').textContent = 'Mark available'; $('st_msg').style.color = 'var(--danger)'; $('st_msg').textContent = "Couldn't save — " + why(e); console.error('stock scan save failed', e); }
+    };
+  };
+
+  // Camera: starts by itself when the tab opens; the button just turns it off/on.
+  let camOn = false;
+  const startCam = async () => {
+    try {
+      $('stHint').style.display = ''; $('stHint').textContent = 'Starting camera…';
+      const ok = await startScan($('stVideo'), handle); if (!ok) return;
+      camOn = true; $('stCam').textContent = 'Stop camera'; $('stHint').style.display = 'none';
+    } catch(e){
+      camOn = false; $('stCam').textContent = 'Start camera'; $('stHint').style.display = '';
+      $('stHint').textContent = (e && e.name === 'NotAllowedError') ? 'Camera permission was denied. Allow it in the browser settings, or use a handheld scanner / type the ID below.' : (e.message || 'Could not start the camera.');
+    }
+  };
+  const stopCam = () => { stopCamera(); camOn = false; $('stCam').textContent = 'Start camera'; $('stHint').style.display = ''; $('stHint').textContent = 'Camera is off'; };
+  $('stCam').onclick = () => camOn ? stopCam() : startCam();
+
+  // Handheld USB / Bluetooth scanners type the code very fast and finish with Enter — catch it wherever the focus is.
+  let buf = '', lastKey = 0;
+  scanKeyHandler = e => {
+    const t = e.target, tag = t && t.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || (t && t.isContentEditable) || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'Enter') { if (buf.length >= 3) { e.preventDefault(); handle(buf); } buf = ''; return; }
+    if (e.key.length !== 1) return;
+    const now = performance.now(); if (now - lastKey > 100) buf = '';
+    buf += e.key; lastKey = now;
+  };
+  document.addEventListener('keydown', scanKeyHandler, true);
+
+  const manual = () => { const v = $('stManual').value.trim(); if (v) { handle(v); $('stManual').value = ''; refocus(); } };
+  $('stFind').onclick = manual; $('stManual').onkeydown = e => { if (e.key === 'Enter') manual(); };
+  refocus();
+  startCam();
+}
+
+// ---------- ASSET PAGE (opened by scanning the QR label) ----------
+const CONDITIONS = ["New","Good","Fair","Poor","Damaged"];
+const condBadge = c => ({New:'badge-resolved',Good:'badge-resolved',Fair:'badge-in-progress'}[c] || 'badge-open');
+function assetUrl(id){ return pageBaseUrl() + '?view=asset&id=' + encodeURIComponent(id); }
+
+// ---------- REPAIR PRIORITY: worked out from the asset itself, never picked by hand ----------
+// score 0-3 maps to URGENCY = Low, Medium, High, Critical (and URGENCY_HOURS gives the fix-by time)
+const TYPE_BASE = {'pos terminal':2, 'router/switch':2, laptop:1, desktop:1, printer:1, 'phone/tablet':1, monitor:0, other:0};
+function typeBase(type){
+  const t = (type || '').toLowerCase();
+  if (t in TYPE_BASE) return TYPE_BASE[t];
+  if (/pos|till|router|switch|server|firewall|network|wi-?fi|access point/.test(t)) return 2;  // custom types
+  return 1;
+}
+function repairPriority(a, tickets){
+  const type = a.type || 'Asset';
+  const base = typeBase(a.type);
+  let score = base;
+  const reasons = [base === 2 ? type + ' is business-critical' : base === 1 ? type + ' is a standard work device' : type + ' is low-impact'];
+  if ((a.condition || 'Good') === 'Damaged') { score += 1; reasons.push('condition is Damaged'); }
+  const open = tickets.filter(t => t.assetId === a.id && t.status !== 'resolved');
+  if (open.length) {
+    score += 1; reasons.push(open.length + ' open ticket' + (open.length === 1 ? '' : 's'));
+    const worst = Math.max(...open.map(t => URGENCY.indexOf(t.urgency)));   // an open High/Critical ticket sets a floor
+    if (worst > score) { score = worst; reasons.push('open ' + URGENCY[worst] + ' ticket'); }
+  }
+  score = Math.max(0, Math.min(URGENCY.length - 1, score));
+  const level = URGENCY[score], hours = URGENCY_HOURS[level];
+  return {level, hours, reasons, dueBy: Date.now() + hours * 3600000};
+}
+const prioBadge = p => ({Critical:'badge-open', High:'badge-open', Medium:'badge-in-progress'}[p] || 'badge-resolved');
+const fmtHours = h => h < 48 ? h + ' hours' : Math.round(h / 24) + ' days';
+
+async function assetAdminSignIn(user, pw){
+  const r = await db.doc('settings/auth').get(); const cred = r && r.data;
+  if (!cred) throw new Error('The admin login has not been set up yet — open the admin dashboard first.');
+  if (user.toLowerCase() !== (cred.user || '').toLowerCase()) return false;
+  return (await hashPw(cred.user, pw, cred.salt)) === cred.hash;
+}
+
+async function renderAssetPage(id){
+  const app = document.getElementById('app');
+  const $ = x => document.getElementById(x);
+  const fail = (icon, t, m) => { app.innerHTML = `<div class="msg"><div class="big">${icon}</div><h1>${t}</h1><p class="sub">${m}</p></div>`; };
+  if (!db) return fail('⚠️', "Can't connect", escapeHtml(dbError || 'Database not available.'));
+  if (!SESSION) { const st = getStoredSession(); if (st && st.role === 'admin') SESSION = {role:'admin', name:'Admin'}; }
+  const admin = isAdmin();   // scanning the QR only unlocks Repair; Transfer / Condition / Edit need an admin sign-in
+  const [r, locations, tickets, allA] = await Promise.all([id ? db.doc('assets/' + id).get() : null, fetchAll('locations'), fetchAll('tickets'), fetchAll('assets')]);
+  if (!r || !r.data) return fail('🔍', 'Asset not found', 'This QR code may be for an asset that was removed.');
+  const a = r.data;
+  const parentA = a.parentId ? allA.find(x => x.id === a.parentId) : null;
+  const cond = a.condition || 'Good';
+  locations.sort((x,y) => (x.name||'').localeCompare(y.name||''));
+  const hist = (a.history || []).slice();
+  if (!hist.some(h => h.type === 'created')) hist.push({type:'created', at:a.createdAt || 0});
+  hist.sort((x,y) => (y.at||0) - (x.at||0));
+  const openT = tickets.filter(t => t.assetId === id && t.status !== 'resolved').length;
+  const lastRepair = hist.find(h => h.type === 'repair');
+  const curPrio = a.status === 'In Repair' && lastRepair && lastRepair.outcome !== 'completed' && lastRepair.priority ? lastRepair.priority : '';
+  const ICON = {created:'✨', repair:'🔧', transfer:'🔁', condition:'📋', edit:'✏️'};
+  const P = x => x || 'Unassigned';
+  const title = h => h.type === 'created' ? 'Asset added' + (h.person ? ' · assigned to ' + h.person : '')
+    : h.type === 'repair' ? (h.outcome === 'completed' ? 'Repair completed' : 'Sent for repair') + (h.priority ? ' · ' + h.priority + ' priority' : '') + (h.vendor ? ' · ' + h.vendor : '') + (h.cost ? ' · cost ' + h.cost : '')
+    : h.type === 'transfer' ? 'Transfer · ' + [
+        (h.from && h.from !== h.to) || h.fromPerson === undefined ? 'Location: ' + (h.from || '—') + ' → ' + h.to : '',
+        h.fromPerson !== undefined ? (h.fromPerson !== h.person ? 'Person: ' + P(h.fromPerson) + ' → ' + P(h.person) : '') : (h.person ? 'Assigned to ' + h.person : '')
+      ].filter(Boolean).join(' · ')
+    : h.type === 'edit' ? 'Details edited · ' + (h.changes || []).join(', ')
+    : 'Condition ' + (h.from || '—') + ' → ' + h.to;
+
+  app.innerHTML = `
+    <div class="ticket-meta" style="margin-bottom:6px;">Asset details</div>
+    <h1>${escapeHtml(a.name)}</h1>
+    ${parentA ? `<div class="ticket-meta" style="margin:4px 0 0;">Part of <a href="${escapeHtml(assetUrl(parentA.id))}">${escapeHtml(parentA.name)}</a></div>` : ''}
+    <div style="margin:8px 0 4px;">
+      <span class="badge ${a.status==='Active'?'badge-resolved':a.status==='In Repair'?'badge-in-progress':'badge-open'}">${escapeHtml(a.status||'Active')}</span>
+      <span class="badge ${condBadge(cond)}">Condition: ${escapeHtml(cond)}</span>
+      ${curPrio ? `<span class="badge ${prioBadge(curPrio)}">Repair priority: ${escapeHtml(curPrio)}</span>` : ''}
+      ${openT ? `<span class="badge badge-open">${openT} open ticket${openT===1?'':'s'}</span>` : ''}
+    </div>
+    <div class="card" style="margin-top:14px;">
+      <div class="ticket-meta" style="margin:0;line-height:1.9;font-size:.88rem;">
+        <b>Type:</b> ${escapeHtml(a.type||'—')}<br>
+        <b>Location:</b> ${escapeHtml(a.locationName||'—')}<br>
+        ${a.floor ? `<b>Floor:</b> ${escapeHtml(a.floor)}<br>` : ''}
+        <b>Serial / tag:</b> ${escapeHtml(a.serial||'—')}<br>
+        <b>Assigned to:</b> ${escapeHtml(a.assignedTo||'—')}<br>
+        <b>Brand / model:</b> ${escapeHtml(a.model||'—')}<br>
+        <b>Purchased:</b> ${escapeHtml(a.purchaseDate||'—')}<br>
+        <b>Warranty until:</b> ${escapeHtml(a.warrantyUntil||'—')}${a.warrantyUntil ? (a.warrantyUntil < new Date().toISOString().slice(0,10) ? ' <span class="badge badge-open">Expired</span>' : ' <span class="badge badge-resolved">Active</span>') : ''}<br>
+        ${a.notes ? '<b>Notes:</b> ' + escapeHtml(a.notes) + '<br>' : ''}
+        <b>Asset ID:</b> ${escapeHtml(a.id)}
+      </div>
+    </div>
+    ${extraView(a, allA)}
+    <div class="acts" style="grid-template-columns:repeat(${admin ? 4 : 1},1fr);">
+      <button class="btn-ghost" data-k="repair">🔧 Repair</button>
+      ${admin ? `<button class="btn-ghost" data-k="transfer">🔁 Transfer</button>
+      <button class="btn-ghost" data-k="condition">📋 Condition</button>
+      <button class="btn-ghost" data-k="edit">✏️ Edit</button>` : ''}
+    </div>
+    <div class="ticket-meta" style="margin:-4px 0 14px;">${admin
+      ? `🔓 Signed in as admin · <button class="link-btn" id="adminOut">Sign out</button>`
+      : `🔒 Transfer, condition and edit are admin only · <button class="link-btn" id="adminIn">Admin sign-in</button>`}</div>
+    <div id="panel"></div>
+    <a class="btn-ghost" style="display:block;margin-bottom:18px;" href="${escapeHtml(formUrl() + '&asset=' + encodeURIComponent(id))}">Report an issue with this asset</a>
+    <h1 style="font-size:1.05rem;margin-bottom:12px;">History</h1>
+    <div class="card">${hist.map(h => `
+      <div class="hist"><b>${ICON[h.type]||'•'} ${escapeHtml(title(h))}</b>
+        ${h.note ? `<div class="ticket-desc" style="margin-top:4px;">${escapeHtml(h.note)}</div>` : ''}
+        ${h.type === 'repair' && h.dueBy ? `<div class="ticket-meta">Fix by ${new Date(h.dueBy).toLocaleString()}</div>` : ''}
+        <div class="ticket-meta">${h.at ? new Date(h.at).toLocaleString() : ''}${h.by ? ' · ' + escapeHtml(h.by) : ''}</div>
+      </div>`).join('')}
+    </div>`;
+
+  if ($('qrSet')) $('qrSet').onclick = () => showQrSheet([a, ...descendantsOf(allA, a.id).map(r => r.k)].map(x => ({url: assetUrl(x.id), title: x.name, sub: x.id === a.id ? (x.locationName || '') : x.type, short: x.id === a.id ? x.name : (x.label || x.type), line2: x.id === a.id ? (x.locationName || '') : a.name})), a.name + ' — QR labels');
+  app.querySelectorAll('.kqr').forEach(b => b.onclick = () => { const k = allA.find(x => x.id === b.dataset.id); if (k) showQr(assetUrl(k.id), k.name, k.type); });
+  const prio = repairPriority(a, tickets);
+  const forms = {
+    repair: () => `<label>Repair status</label><select id="p_outcome"><option value="started">Sent / repair started</option><option value="completed">Repair completed</option></select>
+      <div id="p_prio" class="ticket-meta" style="background:var(--bg);border-radius:var(--radius-sm);padding:11px 13px;margin:14px 0 0;line-height:1.7;">
+        <b>Repair priority</b> <span class="badge ${prioBadge(prio.level)}">${prio.level}</span><br>
+        Fix within ${fmtHours(prio.hours)} · set automatically from this asset<br>
+        Based on: ${escapeHtml(prio.reasons.join(' · '))}
+      </div>
+      <label>Vendor / technician (optional)</label><input id="p_vendor" type="text">
+      <label>Cost (optional)</label><input id="p_cost" type="number" min="0" inputmode="decimal">
+      <label>Details</label><textarea id="p_note" placeholder="What was wrong / what was done?"></textarea>`,
+    transfer: () => `
+      <div class="ticket-meta" style="background:var(--bg);border-radius:var(--radius-sm);padding:11px 13px;margin:0 0 4px;line-height:1.7;">
+        <b>From</b><br>Location: ${escapeHtml(a.locationName||'—')}<br>Person: ${escapeHtml(a.assignedTo||'Unassigned')}
+      </div>
+      <label>To location</label><select id="p_loc">${locations.map(l=>`<option value="${l.id}" ${l.id===a.locationId?'selected':''}>${escapeHtml(l.name)}</option>`).join('')}</select>
+      <label>To person (leave empty for unassigned)</label><input id="p_person" type="text" value="${escapeHtml(a.assignedTo||'')}">
+      <label>Note</label><textarea id="p_note" placeholder="Reason for transfer"></textarea>`,
+    edit: () => `<label>Asset name</label><input id="e_name" type="text" value="${escapeHtml(a.name||'')}">
+      <label>Type</label><select id="e_type">${(ASSET_TYPES.includes(a.type) ? ASSET_TYPES : [a.type, ...ASSET_TYPES]).map(t=>`<option value="${escapeHtml(t)}" ${t===a.type?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select>
+      <label>Serial / asset tag</label><input id="e_serial" type="text" value="${escapeHtml(a.serial||'')}">
+      <label>Brand / model</label><input id="e_model" type="text" value="${escapeHtml(a.model||'')}">
+      <div class="two" style="gap:12px;">
+        <div><label>Purchase date</label><input id="e_pdate" type="date" value="${escapeHtml(a.purchaseDate||'')}"></div>
+        <div><label>Warranty until</label><input id="e_warr" type="date" value="${escapeHtml(a.warrantyUntil||'')}"></div>
+      </div>
+      <label>Notes</label><textarea id="e_notes" style="min-height:64px;">${escapeHtml(a.notes||'')}</textarea>
+      <label>Reason for change (optional)</label><textarea id="p_note" style="min-height:52px;"></textarea>`,
+    condition: () => `<label>Condition</label><select id="p_cond">${CONDITIONS.map(c=>`<option value="${c}" ${c===cond?'selected':''}>${c}</option>`).join('')}</select>
+      <label>Note</label><textarea id="p_note" placeholder="e.g. cracked screen, battery weak"></textarea>`
+  };
+  if ($('adminOut')) $('adminOut').onclick = () => { SESSION = null; storeSession(null); renderAssetPage(id); };
+  if ($('adminIn')) $('adminIn').onclick = () => {
+    app.querySelectorAll('.acts button').forEach(x => x.classList.remove('on'));
+    $('panel').innerHTML = `<div class="card"><h2 class="ct">Admin sign-in</h2>
+      <label>Username</label><input id="s_user" type="text" autocomplete="username">
+      <label>Password</label><input id="s_pw" type="password" autocomplete="current-password">
+      <button class="btn-primary" id="s_go">Sign in</button><div id="s_msg" class="ticket-meta" style="margin-top:10px;"></div></div>`;
+    const err = t => { $('s_msg').style.color = 'var(--danger)'; $('s_msg').textContent = t; };
+    const go = async () => {
+      const user = $('s_user').value.trim(), pw = $('s_pw').value;
+      if (!user || !pw) return err('Enter your admin username and password.');
+      $('s_go').disabled = true;
+      try {
+        if (loginFails) await new Promise(res => setTimeout(res, Math.min(loginFails, 5) * 1000));
+        if (await assetAdminSignIn(user, pw)) { loginFails = 0; SESSION = {role:'admin', name:'Admin'}; storeSession({role:'admin'}); await renderAssetPage(id); return; }
+        loginFails++; err('Incorrect username or password.');
+      } catch(e){ err(e.message || 'Something went wrong.'); }
+      $('s_go').disabled = false;
+    };
+    $('s_go').onclick = go;
+    $('panel').querySelectorAll('input').forEach(i => i.onkeydown = e => { if (e.key === 'Enter') go(); });
+    $('s_user').focus();
+  };
+  app.querySelectorAll('.acts button').forEach(b => b.onclick = () => {
+    const kind = b.dataset.k;
+    if (kind !== 'repair' && !isAdmin()) return;
+    app.querySelectorAll('.acts button').forEach(x => x.classList.toggle('on', x === b));
+    $('panel').innerHTML = `<div class="card">${forms[kind]()}
+      <label>Your name</label><input id="p_by" type="text" value="${escapeHtml(lsGet('it_by')||'')}">
+      <button class="btn-primary" id="p_save">Save</button><div id="p_msg" class="ticket-meta" style="margin-top:10px;"></div></div>`;
+    if (kind === 'repair') {   // priority only applies when a repair is being started
+      const sync = () => { $('p_prio').style.display = $('p_outcome').value === 'started' ? '' : 'none'; };
+      $('p_outcome').onchange = sync; sync();
+    }
+    $('p_save').onclick = async () => {
+      if (kind !== 'repair' && !isAdmin()) { $('p_msg').textContent = 'Only an admin can do this — please sign in.'; return; }
+      const by = $('p_by').value.trim(); lsSet('it_by', by);
+      const entry = {type:kind, at:Date.now(), by, note: $('p_note').value.trim()};
+      const upd = {};
+      if (kind === 'repair') {
+        entry.outcome = $('p_outcome').value; entry.vendor = $('p_vendor').value.trim(); entry.cost = $('p_cost').value;
+        if (entry.outcome === 'started') { const pr = repairPriority(a, tickets); entry.priority = pr.level; entry.dueBy = pr.dueBy; }
+        upd.status = entry.outcome === 'completed' ? 'Active' : 'In Repair';
+      } else if (kind === 'transfer') {
+        const loc = locations.find(l => l.id === $('p_loc').value);
+        const person = $('p_person').value.trim();
+        if (!loc || (loc.id === a.locationId && person === (a.assignedTo||''))) { $('p_msg').textContent = 'Change the location or the person to record a transfer.'; return; }
+        entry.from = a.locationName || ''; entry.to = loc.name; entry.fromPerson = a.assignedTo || ''; entry.person = person;
+        Object.assign(upd, {locationId: loc.id, locationName: loc.name, assignedTo: person});
+      } else if (kind === 'edit') {
+        const nv = {name:$('e_name').value.trim(), type:$('e_type').value, serial:$('e_serial').value.trim(), model:$('e_model').value.trim(),
+          purchaseDate:$('e_pdate').value, warrantyUntil:$('e_warr').value, notes:$('e_notes').value.trim()};
+        if (!nv.name) { $('p_msg').textContent = 'Asset name is required.'; return; }
+        const L = {name:'name', type:'type', serial:'serial/tag', model:'model', purchaseDate:'purchase date', warrantyUntil:'warranty', notes:'notes'};
+        const changed = Object.keys(nv).filter(k => (a[k] || '') !== nv[k]);
+        if (!changed.length) { $('p_msg').textContent = 'No changes to save.'; return; }
+        entry.changes = changed.map(k => L[k]);
+        Object.assign(upd, nv);
+      } else {
+        entry.from = cond; entry.to = $('p_cond').value; upd.condition = entry.to;
+        if (entry.to === cond && !entry.note) { $('p_msg').textContent = 'Change the condition or add a note.'; return; }
+      }
+      upd.history = [...(a.history || []), entry];
+      $('p_save').disabled = true; $('p_save').textContent = 'Saving…';
+      try {
+        await db.doc('assets/' + id).update(upd);
+        const kids = descendantsOf(allA, id).map(r => r.k);
+        if (kids.length && kind === 'transfer') await Promise.allSettled(kids.map(k => db.doc('assets/' + k.id).update({locationId: upd.locationId, locationName: upd.locationName, assignedTo: upd.assignedTo,
+          history: [...(k.history || []), {...entry, note: 'Moved with ' + a.name + (entry.note ? ' · ' + entry.note : '')}]})));
+        if (kids.length && kind === 'edit' && upd.name && upd.name !== a.name) await Promise.allSettled(kids.filter(k => (k.name || '').startsWith(a.name)).map(k => db.doc('assets/' + k.id).update({name: upd.name + k.name.slice(a.name.length)})));
+        await renderAssetPage(id);
+      }
+      catch(e){ $('p_save').disabled = false; $('p_save').textContent = 'Save'; $('p_msg').style.color = 'var(--danger)'; $('p_msg').textContent = "Couldn't save — check your connection."; }
+    };
+  });
+}
+
+// ---------- helpers ----------
+const REQUEST_TYPES = ["Product","Service"];
+const isReq = t => t.ticketType === 'request';
+function label(s){ return s.split('-').map(w=>w[0].toUpperCase()+w.slice(1)).join(' '); }
+function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function timeAgo(ts){
+  if (!ts) return '';
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff/60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m/60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h/24) + 'd ago';
+}
+
+init();
+</script>
+</body>
+</html>
